@@ -73,6 +73,54 @@
             };
           }
 
+          (
+            {
+              pkgs,
+              config,
+              ...
+            }: let
+              inherit (config.hardware.nvidia-jetpack.devicePkgs) teeSupplicant xtest opteepkcs11ta;
+              pkcs11-tool-optee = pkgs.writeShellScriptBin "pkcs11-tool-optee" ''
+                exec "${pkgs.opensc}/bin/pkcs11-tool" --module "${teeSupplicant}/lib/libckteec.so" $@
+              '';
+            in {
+
+              hardware.nvidia-jetpack.firmware.optee.suppPluginLoadPath = pkgs.linkFarm "optee-plugin-path" [
+                {
+                  name = "f07bfc66-958c-4a15-99c0-260e4e7375dd.plugin";
+                  path = "${xtest}/supp_plugin/f07bfc66-958c-4a15-99c0-260e4e7375dd.plugin";
+                }
+              ];
+
+              hardware.nvidia-jetpack.firmware.optee.clientLoadPath = pkgs.linkFarm "optee-load-path"
+              (
+                (
+                  let
+                    xTestTaDir = "${xtest}/ta";
+                  in
+                    builtins.map (
+                      ta:
+                        {
+                          name = "optee_armtz" + "/" + ta;
+                          path = xTestTaDir + "/" + ta;
+                        }) (builtins.attrNames (builtins.readDir xTestTaDir))
+                )
+              ++
+                (
+                  [{
+                    name = "optee_armtz/fd02c9da-306c-48c7-a49c-bbd827ae86ee.ta";
+                    path = "${opteepkcs11ta}/fd02c9da-306c-48c7-a49c-bbd827ae86ee.ta";
+                  }]
+                )
+              );
+
+              environment.systemPackages = [
+                pkcs11-tool-optee
+                xtest
+              ];
+            }
+          )
+
           formatModule
         ]
         ++ (import ../modules/module-list.nix)
