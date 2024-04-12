@@ -222,13 +222,13 @@ Kernel: arch/x86/boot/bzImage
 [+] Config check is finished: 'OK' - 188 / 'FAIL' - 8
 [ghaf-kernel-devshell:~/ghaf/linux-6.6.7]$ kernel-hardening-checker -c .config| grep 'FAIL: '
 CONFIG_CFI_CLANG                        |kconfig|     y      |   kspp   | self_protection  | FAIL: is not found
-CONFIG_CFI_PERMISSIVE                   |kconfig| is not set |   kspp   | self_protection  | FAIL: CONFIG_CFI_CLANG is not &quot;y&quot;
-CONFIG_MODULES                          |kconfig| is not set |   kspp   |cut_attack_surface| FAIL: &quot;y&quot;
-CONFIG_KCMP                             |kconfig| is not set |  grsec   |cut_attack_surface| FAIL: &quot;y&quot;
-CONFIG_FB                               |kconfig| is not set |maintainer|cut_attack_surface| FAIL: &quot;y&quot;
-CONFIG_VT                               |kconfig| is not set |maintainer|cut_attack_surface| FAIL: &quot;y&quot;
-CONFIG_KSM                              |kconfig| is not set |  clipos  |cut_attack_surface| FAIL: &quot;y&quot;
-CONFIG_TRIM_UNUSED_KSYMS                |kconfig|     y      |    my    |cut_attack_surface| FAIL: &quot;is not set&quot;
+CONFIG_CFI_PERMISSIVE                   |kconfig| is not set |   kspp   | self_protection  | FAIL: CONFIG_CFI_CLANG is not "y"
+CONFIG_MODULES                          |kconfig| is not set |   kspp   |cut_attack_surface| FAIL: "y"
+CONFIG_KCMP                             |kconfig| is not set |  grsec   |cut_attack_surface| FAIL: "y"
+CONFIG_FB                               |kconfig| is not set |maintainer|cut_attack_surface| FAIL: "y"
+CONFIG_VT                               |kconfig| is not set |maintainer|cut_attack_surface| FAIL: "y"
+CONFIG_KSM                              |kconfig| is not set |  clipos  |cut_attack_surface| FAIL: "y"
+CONFIG_TRIM_UNUSED_KSYMS                |kconfig|     y      |    my    |cut_attack_surface| FAIL: "is not set"
 </code></pre>
 </li>
 </ul>
