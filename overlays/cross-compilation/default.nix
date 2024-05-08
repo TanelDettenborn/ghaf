@@ -4,6 +4,7 @@
 # This overlay is for specific fixes needed only to enable cross-compilation.
 #
 (final: prev: {
+  appstream = import ./appstream {inherit prev;};
   chromium = import ./chromium {inherit prev final;};
   edk2 = import ./edk2 {inherit final prev;};
   element-desktop = import ./element-desktop {inherit prev;};
