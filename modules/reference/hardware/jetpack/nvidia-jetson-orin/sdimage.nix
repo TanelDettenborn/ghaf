@@ -46,7 +46,7 @@
               --disallow-untyped-defs \
               $out
           '';
-      fdtPath = "${config.hardware.deviceTree.package}/nvidia/${config.hardware.deviceTree.name}";
+      fdtPath = "${pkgs.nvidia-jetpack.bspSrc}/kernel/dtb/${config.hardware.deviceTree.name}";
     in
     {
       firmwareSize = 256;
