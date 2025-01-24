@@ -12,7 +12,7 @@ SPDX-License-Identifier: WTFPL
   <head>
     <!-- Book generated using mdBook -->
     <meta charset="UTF-8" />
-    <title>Release ghaf-23.09 - Ghaf Framework</title>
+    <title>Release ghaf-24.12 - Ghaf Framework</title>
  
     <!-- Custom HTML head -->
 
@@ -349,9 +349,10 @@ SPDX-License-Identifier: WTFPL
     Copyright 2022-2024 TII (SSRC) and the Ghaf contributors
     SPDX-License-Identifier: CC-BY-SA-4.0
 -->
-<h1 id="release-ghaf-2309"><a class="header" href="#release-ghaf-2309">Release ghaf-23.09</a></h1>
-<h2 id="release-branch"><a class="header" href="#release-branch">Release Branch</a></h2>
-<p><a href="https://github.com/tiiuae/ghaf/tree/ghaf-23.09">https://github.com/tiiuae/ghaf/tree/ghaf-23.09</a></p>
+<h1 id="release-ghaf-2412"><a class="header" href="#release-ghaf-2412">Release ghaf-24.12</a></h1>
+<p>This is a quarterly release for all supported hardware platforms, and it complies with SLSA v1.0 Level 3 requirements.</p>
+<h2 id="release-tag"><a class="header" href="#release-tag">Release Tag</a></h2>
+<p><a href="https://github.com/tiiuae/ghaf/releases/tag/ghaf-24.12">https://github.com/tiiuae/ghaf/releases/tag/ghaf-24.12</a></p>
 <h2 id="supported-hardware"><a class="header" href="#supported-hardware">Supported Hardware</a></h2>
 <p>The following target hardware is supported by this release:</p>
 <ul>
@@ -360,65 +361,79 @@ SPDX-License-Identifier: WTFPL
 <li>Generic x86 (PC)</li>
 <li>Polarfire Icicle Kit</li>
 <li>Lenovo ThinkPad X1 Carbon Gen 11</li>
+<li>Lenovo ThinkPad X1 Carbon Gen 10</li>
+<li>NXP i.MX 8M Plus (build support only)</li>
 </ul>
-<h2 id="what-is-new-in-ghaf-2309"><a class="header" href="#what-is-new-in-ghaf-2309">What is New in ghaf-23.09</a></h2>
+<h2 id="what-is-new-in-ghaf-2412"><a class="header" href="#what-is-new-in-ghaf-2412">What is New in ghaf-24.12</a></h2>
+<p>Lenovo X1 Carbon Gen 10/11:</p>
 <ul>
-<li>New supported target hardware:
+<li>Chromium replaced with Google Chrome.</li>
+<li>Zoom web application added into comms-vm.</li>
+<li>Xarchiver file compression application added.</li>
+<li>Audio Control, USB, and Network Manager applets added.</li>
+<li>Bluetooth applet added to the system tray.</li>
+<li>The first version of the Control Panel currently supports the following:
 <ul>
-<li>NVIDIA Jetson Orin NX</li>
-<li>Polarfire Icicle Kit</li>
-<li>Lenovo ThinkPad X1 Carbon Gen 11</li>
-</ul>
-</li>
-<li>Modularization of the Ghaf framework: <a href="../ref_impl/ghaf-based-project.html">Ghaf as Library: Templates</a>.</li>
-<li>NVIDIA Jetson Orin NX Ethernet passthrough.</li>
-<li>Lenovo X1 Carbon Gen 11:
-<ul>
-<li>Graphics passthrough to GUI VM.</li>
-<li>Launching Application VMs through GUI VM (Chromium, Gala, and Zathura).</li>
-<li>Paravirtualized audio.</li>
-<li>Webcam passthrough.</li>
-<li>Touchpad passthrough.</li>
+<li>display resolution and scale settings;</li>
+<li>locale and timezone settings.</li>
 </ul>
 </li>
-<li>Cross-compilation of the ARM targets (NVIDIA) on the x86 server (with demo applications excluded).</li>
+<li>The System Idle behavior has been reworked: the screen dims after 4 minutes of inactivity, the session locks in 5 minutes, the screen goes off in 7.5 minutes, and the system suspends in 15 minutes.</li>
+<li>User account management has been added. The user sets a username and password when a device is first booted.</li>
+<li>The username is displayed on a lock screen.</li>
+<li>Dynamic updates of Microsoft endpoint URLs.</li>
+<li>A separate configurable repository for adding allowed URLs for business-vm.</li>
+<li>Auto-reconnect hotplugged devices when the VM restarts.</li>
+<li>Wayland security context protocol enabled.</li>
+<li>Refactored application definitions to make it easier to add and remove applications.</li>
+<li>Hardened greetd.service.</li>
+<li>AppArmor enabled.</li>
+<li>Multiple user experience improvements.</li>
+</ul>
+<p>Lenovo X1 and NVIDIA Jetson Orin NX/AGX Orin:</p>
+<ul>
+<li>Lock and Log Out buttons moved from the applications menu to the power menu.</li>
+<li>Shutdown and Reboot buttons were removed from the applications menu and are now available in the Power menu.</li>
+<li>The Powerbar module is added to the lock screen.</li>
+<li>Run-time multi-monitor support.</li>
+<li>Taskbar control for four virtual desktops.</li>
+<li>Development, testing, and performance tooling improvements.</li>
 </ul>
 <h2 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h2>
-<p>Fixed bugs that were in the ghaf-23.06 release:</p>
+<p>Fixed bugs that were present in the <a href="../release_notes/ghaf-24.09.html">ghaf-24.09</a> release:</p>
 <ul>
-<li>NVIDIA Jetson AGX Orin:
-<ul>
-<li>Cannot open Windows launcher via shortcut or command line.</li>
-</ul>
-</li>
-<li>No Windows launcher in x86 build.</li>
+<li>It is impossible to change the Wi-Fi network from the Network Settings application.</li>
+<li>Cannot connect to a hidden Wi-Fi network from GUI.</li>
+<li>The taskbar on the extended display is visible only when booting up with an HDMI connection.</li>
+<li>Suspend does not work from the taskbar power menu.</li>
+<li>The Mute status is not visible in the taskbar.</li>
+<li>Bluetooth notification windows stay on a screen.</li>
+<li>Time synchronization between host and VMs does not work in all scenarios.</li>
 </ul>
 <h2 id="known-issues-and-limitations"><a class="header" href="#known-issues-and-limitations">Known Issues and Limitations</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Issue</th><th>Status</th><th>Comments</th></tr></thead><tbody>
-<tr><td>Chromium App VM does not boot up on X1</td><td>In Progress</td><td>Intermittent timing issue, under investigation.</td></tr>
-<tr><td>The GALA app does not work</td><td>In Progress</td><td>Will be fixed in the next release.</td></tr>
-<tr><td>Shutdown or reboot of Lenovo X1 takes a lot of time (7 minutes)</td><td>In Progress</td><td>Advice: be patient or, if in hurry, press power key for 15 sec.</td></tr>
-<tr><td>Copy and paste text from or to Chromium AppVM does not work</td><td>In Progress</td><td></td></tr>
-<tr><td>Element cannot be opened on NVIDIA AGX Orin HW on the host</td><td>Will not Fix</td><td>Applications on the host will not be supported in the longer term.</td></tr>
-<tr><td>Cannot move the GALA/Element window by dragging with the mouse</td><td>In Progress</td><td>Workaround: press Windows key when moving the mouse.</td></tr>
-<tr><td>Personal security keys cannot be created</td><td>In Progress</td><td>Workaround: use another device to create security keys.</td></tr>
-<tr><td>No audio in a USB headset when running the application on the host</td><td>Will not Fix</td><td>Audio on a host is not supported.</td></tr>
-<tr><td>Cannot log in to the Element chat with a Google account</td><td>In Progress</td><td>Workaround for x86: create a user specifically for Element.</td></tr>
-<tr><td>Windows launcher application does not work</td><td>In Progress</td><td>Workaround: launch Windows VM from the command line.</td></tr>
+<tr><td><strong>Lenovo X1</strong></td><td></td><td></td></tr>
+<tr><td>Application menu icons are missing in the first boot after the software installation</td><td>In Progress</td><td>Workaround: close and re-open the menu, icons will be available again.</td></tr>
+<tr><td>The Control Panel is non-functional apart from the Display Settings, Local and Timezone settings</td><td>In Progress</td><td>The functionality will be gradually improved in coming releases.</td></tr>
+<tr><td>VPN credentials are not saved</td><td>On Hold</td><td></td></tr>
+<tr><td>The keyboard always boots up with the English layout</td><td>In Progress</td><td>Workaround: use Alt+Shift to switch between English-Arabic-Finnish layout.</td></tr>
+<tr><td>Yubikey for unlocking does not work</td><td>In Progress</td><td>Fix in progress.</td></tr>
+<tr><td>The fingerprint scan login does not work</td><td>In Progress</td><td>Fix in progress.</td></tr>
+<tr><td>A laptop cannot be unlocked after suspension sometimes</td><td>In Progress</td><td>Fix in progress. Workaround: log out and log in again.</td></tr>
+<tr><td>A laptop may wake up from a suspended state without user interaction</td><td>In Progress</td><td>Under investigation.</td></tr>
+<tr><td><strong>NVIDIA Jetson AGX Orin / Orin NX</strong></td><td></td><td></td></tr>
+<tr><td>Application menu icons are missing in the first boot after the software installation</td><td>In Progress</td><td>Workaround: close and re-open the menu, icons will be available again.</td></tr>
+<tr><td>The application menu access does not work with the Windows key</td><td>In Progress</td><td>Workaround: the application menu can be accessed through the taskbar in the top left corner.</td></tr>
+<tr><td>The keyboard always boots up with the English layout</td><td>In Progress</td><td>Workaround: use Alt+Shift to switch between English-Arabic-Finnish layout.</td></tr>
+<tr><td>The Suspend power option does not work</td><td>In Progress</td><td>Behavior is locking the device.</td></tr>
 </tbody></table>
 </div>
 <h2 id="environment-requirements"><a class="header" href="#environment-requirements">Environment Requirements</a></h2>
 <p>There are no specific requirements for the environment with this release.</p>
 <h2 id="installation-instructions"><a class="header" href="#installation-instructions">Installation Instructions</a></h2>
-<p>Released images are available at <a href="https://ghafreleasesstorage.z16.web.core.windows.net/ghaf-23/">ghafreleasesstorage.z16.web.core.windows.net/ghaf-23</a>.</p>
-<p>Download the required image and use the following instructions:</p>
-<div class="table-wrapper"><table><thead><tr><th>Release Image</th><th>Build and Run</th></tr></thead><tbody>
-<tr><td>ghaf-23.09_Generic_x86.tar.xz</td><td><a href="../ref_impl/build_and_run.html#running-ghaf-image-for-x86-computer">Running Ghaf Image for x86 Computer</a></td></tr>
-<tr><td>ghaf-23.09_Lenovo_X1_Gen11.tar.xz</td><td><a href="../ref_impl/build_and_run.html#running-ghaf-image-for-lenovo-x1">Running Ghaf Image for Lenovo X1</a></td></tr>
-<tr><td>ghaf-23.09_Nvidia_Orin_AGX.tar.xz, ghaf-23.09_Nvidia_Orin_NX.tar.xz</td><td><a href="../ref_impl/build_and_run.html#ghaf-image-for-nvidia-jetson-orin-agx">Ghaf Image for NVIDIA Jetson Orin AGX</a></td></tr>
-<tr><td>ghaf-23.09_PolarFire_RISC-V.tar.xz</td><td><a href="../ref_impl/build_and_run.html#building-ghaf-image-for-microchip-icicle-kit">Building Ghaf Image for Microchip Icicle Kit</a></td></tr>
-</tbody></table>
-</div></div>
+<p>Released images are available at <a href="https://ghafreleasesstorage.z16.web.core.windows.net/ghaf-24-12">ghafreleasesstorage.z16.web.core.windows.net/ghaf-24-12</a>.</p>
+<p>Download the required image and use the following instructions: <a href="../ref_impl/build_and_run">Build and Run</a>.</p>
+</div>
               <div class="sidetoc">
                 <nav class="pagetoc"></nav>
               </div>
@@ -428,7 +443,7 @@ SPDX-License-Identifier: WTFPL
               <!-- Mobile navigation buttons -->
               <a
                 rel="prev"
-                href="../release_notes/ghaf-23.12.html"
+                href="../release_notes/release_notes.html"
                 class="mobile-nav-chapters previous"
                 title="Previous chapter"
                 aria-label="Previous chapter"
@@ -439,7 +454,7 @@ SPDX-License-Identifier: WTFPL
                
               <a
                 rel="next prefetch"
-                href="../release_notes/ghaf-23.06.html"
+                href="../release_notes/ghaf-24.09.4.html"
                 class="mobile-nav-chapters next"
                 title="Next chapter"
                 aria-label="Next chapter"
@@ -456,7 +471,7 @@ SPDX-License-Identifier: WTFPL
         <nav class="nav-wide-wrapper" aria-label="Page navigation">
           <a
             rel="prev"
-            href="../release_notes/ghaf-23.12.html"
+            href="../release_notes/release_notes.html"
             class="nav-chapters previous"
             title="Previous chapter"
             aria-label="Previous chapter"
@@ -467,7 +482,7 @@ SPDX-License-Identifier: WTFPL
            
           <a
             rel="next prefetch"
-            href="../release_notes/ghaf-23.06.html"
+            href="../release_notes/ghaf-24.09.4.html"
             class="nav-chapters next"
             title="Next chapter"
             aria-label="Next chapter"
