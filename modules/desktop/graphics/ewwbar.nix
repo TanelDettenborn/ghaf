@@ -115,9 +115,33 @@ in
         description = "ewwbar";
         serviceConfig = {
           Type = "forking";
-          ExecCondition = ''
-            ${pkgs.bash}/bin/bash -c "${pkgs.wlr-randr}/bin/wlr-randr > /dev/null 2>&1"
-          '';
+          ExecCondition =
+            let
+              display-connected = pkgs.writeShellApplication {
+                name = "display-connected";
+                runtimeInputs = [
+                  pkgs.jq
+                  pkgs.wlr-randr
+                ];
+                bashOptions = [ ];
+                text = ''
+                  # Exits with error if no display is detected
+
+                  # Retrieve display information
+                  if ! wlr_output_json=$(wlr-randr --json); then
+                    echo "Error: Failed to get display info from wlr-randr"
+                    exit 1
+                  fi
+
+                  # Check if any displays are connected
+                  if ! echo "$wlr_output_json" | jq -e 'length > 0' > /dev/null; then
+                    echo "Error: No connected displays found."
+                    exit 1
+                  fi
+                '';
+              };
+            in
+            "${display-connected}/bin/display-connected";
           ExecStart = "${ewwScripts.ewwbar-ctrl}/bin/ewwbar-ctrl start";
           ExecReload = "${ewwScripts.ewwbar-ctrl}/bin/ewwbar-ctrl reload";
           ExecStopPost = ''
@@ -145,8 +169,8 @@ in
           Restart = "on-failure";
         };
         after = [ "ewwbar.service" ];
+        bindsTo = [ "ewwbar.service" ];
         wantedBy = [ "ewwbar.service" ];
-        partOf = [ "ewwbar.service" ];
       };
 
       eww-display-handler = {
@@ -157,8 +181,8 @@ in
           Restart = "on-failure";
         };
         after = [ "ewwbar.service" ];
+        bindsTo = [ "ewwbar.service" ];
         wantedBy = [ "ewwbar.service" ];
-        partOf = [ "ewwbar.service" ];
       };
 
       eww-volume-popup = {
@@ -175,8 +199,8 @@ in
           Restart = "on-failure";
         };
         after = [ "ewwbar.service" ];
+        bindsTo = [ "ewwbar.service" ];
         wantedBy = [ "ewwbar.service" ];
-        partOf = [ "ewwbar.service" ];
       };
 
       eww-workspace-popup = {
@@ -193,8 +217,8 @@ in
           Restart = "on-failure";
         };
         after = [ "ewwbar.service" ];
+        bindsTo = [ "ewwbar.service" ];
         wantedBy = [ "ewwbar.service" ];
-        partOf = [ "ewwbar.service" ];
       };
 
       eww-fullscreen-update = {
@@ -205,8 +229,8 @@ in
           Restart = "on-failure";
         };
         after = [ "ewwbar.service" ];
+        bindsTo = [ "ewwbar.service" ];
         wantedBy = [ "ewwbar.service" ];
-        partOf = [ "ewwbar.service" ];
       };
 
     };
