@@ -31,10 +31,11 @@
         <!-- Custom theme stylesheets -->
 
 
-        <!-- Provide site root to javascript -->
+        <!-- Provide site root and default themes to javascript -->
         <script>
-            var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -44,8 +45,8 @@
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
             try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
 
                 if (theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
@@ -59,7 +60,8 @@
 
         <!-- Set the theme before any content is loaded, prevents flash -->
         <script>
-            var theme;
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
@@ -72,8 +74,8 @@
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var sidebar = null;
-            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
@@ -109,6 +111,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
@@ -235,6 +238,45 @@
 list of string</p>
 <p><em>Default:</em>
 <code>[ ]</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix">https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix</a></li>
+</ul>
+<h2 id="ghafcommonhardwareaudio"><a class="header" href="#ghafcommonhardwareaudio">ghaf.common.hardware.audio</a></h2>
+<p>List of Audio PCI devices currently enabled for passthrough.</p>
+<p><em>Type:</em>
+list of (attribute set)</p>
+<p><em>Default:</em></p>
+<pre><code>[
+  { }
+]
+</code></pre>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix">https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix</a></li>
+</ul>
+<h2 id="ghafcommonhardwaregpus"><a class="header" href="#ghafcommonhardwaregpus">ghaf.common.hardware.gpus</a></h2>
+<p>List of GPUs currently enabled for passthrough.</p>
+<p><em>Type:</em>
+list of (attribute set)</p>
+<p><em>Default:</em></p>
+<pre><code>[
+  { }
+]
+</code></pre>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix">https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix</a></li>
+</ul>
+<h2 id="ghafcommonhardwarenics"><a class="header" href="#ghafcommonhardwarenics">ghaf.common.hardware.nics</a></h2>
+<p>List of network interfaces currently enabled for passthrough.</p>
+<p><em>Type:</em>
+list of (attribute set)</p>
+<p><em>Default:</em></p>
+<pre><code>[
+  { }
+]
+</code></pre>
 <p><em>Declared by:</em></p>
 <ul>
 <li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix">https://github.com/tiiuae/ghaf/blob/main/modules/common/common.nix</a></li>
@@ -935,6 +977,36 @@ boolean</p>
 <p><em>Declared by:</em></p>
 <ul>
 <li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/desktop/nvidia-gpu">https://github.com/tiiuae/ghaf/blob/main/modules/desktop/nvidia-gpu</a></li>
+</ul>
+<h2 id="ghafgraphicspower-managerenable"><a class="header" href="#ghafgraphicspower-managerenable">ghaf.graphics.power-manager.enable</a></h2>
+<p>Override logind power management using ghaf-powercontrol</p>
+<p><em>Type:</em>
+boolean</p>
+<p><em>Default:</em>
+<code>false</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/desktop/graphics/power-manager.nix">https://github.com/tiiuae/ghaf/blob/main/modules/desktop/graphics/power-manager.nix</a></li>
+</ul>
+<h2 id="ghafgraphicspower-managerenableshutdownlistener"><a class="header" href="#ghafgraphicspower-managerenableshutdownlistener">ghaf.graphics.power-manager.enableShutdownListener</a></h2>
+<p>Enable the shutdown/reboot signal listener service</p>
+<p><em>Type:</em>
+boolean</p>
+<p><em>Default:</em>
+<code>true</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/desktop/graphics/power-manager.nix">https://github.com/tiiuae/ghaf/blob/main/modules/desktop/graphics/power-manager.nix</a></li>
+</ul>
+<h2 id="ghafgraphicspower-managerenablesuspendlistener"><a class="header" href="#ghafgraphicspower-managerenablesuspendlistener">ghaf.graphics.power-manager.enableSuspendListener</a></h2>
+<p>Enable the suspend signal listener service</p>
+<p><em>Type:</em>
+boolean</p>
+<p><em>Default:</em>
+<code>true</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/desktop/graphics/power-manager.nix">https://github.com/tiiuae/ghaf/blob/main/modules/desktop/graphics/power-manager.nix</a></li>
 </ul>
 <h2 id="ghafguestkernelhardeningenable"><a class="header" href="#ghafguestkernelhardeningenable">ghaf.guest.kernel.hardening.enable</a></h2>
 <p>Enable Ghaf Guest hardening feature</p>
@@ -2002,6 +2074,10 @@ list of (attribute set)</p>
         description = "Mass Storage - SCSI (USB drives)";
         subclass = 6;
       }
+      {
+        class = 17;
+        description = "USB-C alternate modes supported by device";
+      }
     ];
   }
   {
@@ -2437,6 +2513,17 @@ boolean</p>
 <p><em>Default:</em>
 <code>false</code></p>
 <p><em>Example:</em>
+<code>true</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/profiles/graphics.nix">https://github.com/tiiuae/ghaf/blob/main/modules/profiles/graphics.nix</a></li>
+</ul>
+<h2 id="ghafprofilesgraphicsallowsuspend"><a class="header" href="#ghafprofilesgraphicsallowsuspend">ghaf.profiles.graphics.allowSuspend</a></h2>
+<p>Allow the system to suspend. When enabled, the system will suspend via either the suspend icon,
+lid close, or button press.</p>
+<p><em>Type:</em>
+boolean</p>
+<p><em>Default:</em>
 <code>true</code></p>
 <p><em>Declared by:</em></p>
 <ul>
@@ -3080,6 +3167,46 @@ string</p>
 <ul>
 <li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/reference/services/proxy-server/3proxy-config.nix">https://github.com/tiiuae/ghaf/blob/main/modules/reference/services/proxy-server/3proxy-config.nix</a></li>
 </ul>
+<h2 id="ghafreferenceserviceswireguard-gui"><a class="header" href="#ghafreferenceserviceswireguard-gui">ghaf.reference.services.wireguard-gui</a></h2>
+<p>Whether to enable Wireguard GUI service.</p>
+<p><em>Type:</em>
+boolean</p>
+<p><em>Default:</em>
+<code>false</code></p>
+<p><em>Example:</em>
+<code>true</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/reference/services">https://github.com/tiiuae/ghaf/blob/main/modules/reference/services</a></li>
+</ul>
+<h2 id="ghafreferenceserviceswireguard-gui-configenable"><a class="header" href="#ghafreferenceserviceswireguard-gui-configenable">ghaf.reference.services.wireguard-gui-config.enable</a></h2>
+<p>Whether to enable Wireguard guivm configuration.</p>
+<p><em>Type:</em>
+boolean</p>
+<p><em>Default:</em>
+<code>false</code></p>
+<p><em>Example:</em>
+<code>true</code></p>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/reference/services/wireguard-gui/wireguard-gui-config.nix">https://github.com/tiiuae/ghaf/blob/main/modules/reference/services/wireguard-gui/wireguard-gui-config.nix</a></li>
+</ul>
+<h2 id="ghafreferenceserviceswireguard-gui-configvms"><a class="header" href="#ghafreferenceserviceswireguard-gui-configvms">ghaf.reference.services.wireguard-gui-config.vms</a></h2>
+<p>List of VM names where Wireguard GUI should be enabled.</p>
+<p><em>Type:</em>
+list of string</p>
+<p><em>Default:</em>
+<code>[ ]</code></p>
+<p><em>Example:</em></p>
+<pre><code>[
+  "business-vm"
+  "chrome-vm"
+]
+</code></pre>
+<p><em>Declared by:</em></p>
+<ul>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/reference/services/wireguard-gui/wireguard-gui-config.nix">https://github.com/tiiuae/ghaf/blob/main/modules/reference/services/wireguard-gui/wireguard-gui-config.nix</a></li>
+</ul>
 <h2 id="ghafsecurityapparmorenable"><a class="header" href="#ghafsecurityapparmorenable">ghaf.security.apparmor.enable</a></h2>
 <p>Enable Apparmor security.</p>
 <p><em>Type:</em>
@@ -3334,7 +3461,7 @@ boolean</p>
 <code>false</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmenable_host"><a class="header" href="#ghafshmenable_host">ghaf.shm.enable_host</a></h2>
 <p>Enables the memsocket functionality on the host system</p>
@@ -3344,7 +3471,7 @@ boolean</p>
 <code>false</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmclientsocketpath"><a class="header" href="#ghafshmclientsocketpath">ghaf.shm.clientSocketPath</a></h2>
 <p>Specifies the location of the output socket, which will connected to
@@ -3356,7 +3483,7 @@ absolute path</p>
 <code>"/run/user/1000/memsocket-client.sock"</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmdisplay"><a class="header" href="#ghafshmdisplay">ghaf.shm.display</a></h2>
 <p>Enables the use of shared memory with Waypipe for Wayland-enabled
@@ -3368,7 +3495,7 @@ boolean</p>
 <code>false</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmflataddr"><a class="header" href="#ghafshmflataddr">ghaf.shm.flataddr</a></h2>
 <p>Maps the shared memory to a physical address if set to a non-zero value.
@@ -3380,7 +3507,7 @@ string</p>
 <code>"0x920000000"</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmhostsocketpath"><a class="header" href="#ghafshmhostsocketpath">ghaf.shm.hostSocketPath</a></h2>
 <p>Specifies the path to the shared memory socket, used by QEMU
@@ -3391,7 +3518,7 @@ absolute path</p>
 <code>"/tmp/ivshmem_socket"</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmhugepagesz"><a class="header" href="#ghafshmhugepagesz">ghaf.shm.hugePageSz</a></h2>
 <p>Specifies the size of the large memory page area. Supported kernel
@@ -3402,7 +3529,7 @@ string</p>
 <code>"2M"</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshminstancescount"><a class="header" href="#ghafshminstancescount">ghaf.shm.instancesCount</a></h2>
 <p>Number of memory slots allocated in the shared memory region</p>
@@ -3412,7 +3539,7 @@ signed integer</p>
 <code>0</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmmemsize"><a class="header" href="#ghafshmmemsize">ghaf.shm.memSize</a></h2>
 <p>Specifies the size of the shared memory region, measured in
@@ -3423,7 +3550,7 @@ signed integer</p>
 <code>16</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmserversocketpath"><a class="header" href="#ghafshmserversocketpath">ghaf.shm.serverSocketPath</a></h2>
 <p>Specifies the path of the listening socket, which is used by Waypipe
@@ -3435,7 +3562,7 @@ absolute path</p>
 <code>"/run/user/1000/memsocket-server.sock"</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafshmvms_enabled"><a class="header" href="#ghafshmvms_enabled">ghaf.shm.vms_enabled</a></h2>
 <p>List of vms having access to shared memory</p>
@@ -3445,7 +3572,7 @@ list of string</p>
 <code>[ ]</code></p>
 <p><em>Declared by:</em></p>
 <ul>
-<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/hardware/common/shared-mem.nix</a></li>
+<li><a href="https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix">https://github.com/tiiuae/ghaf/blob/main/modules/microvm/host/shared-mem.nix</a></li>
 </ul>
 <h2 id="ghafsystemdenable"><a class="header" href="#ghafsystemdenable">ghaf.systemd.enable</a></h2>
 <p>Whether to enable Enable minimal systemd configuration…</p>
