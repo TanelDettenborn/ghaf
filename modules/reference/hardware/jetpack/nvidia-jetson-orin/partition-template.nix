@@ -14,6 +14,45 @@ let
   # TODO should this be changed when NX added
   cfg = config.ghaf.hardware.nvidia.orin;
 
+  # Strictly speaking then this should be inside optee.nix file,
+  # but for the POC it is here. There must be away to concat
+  # hardware.nvidia-jetpack.flashScriptOverrides.preFlashCommands
+  # string..
+  genekb = pkgs.stdenv.mkDerivation {
+    pname = "gen-ekb";
+    src = ./gen-ekb/.;
+    version = "2.0";
+    phases = [ "unpackPhase" "buildPhase" "installPhase" ];
+    nativeBuildInputs = [
+      pkgs.buildPackages.python3
+      (pkgs.buildPackages.python3.withPackages (p: with p; [
+        cryptography
+        pycrypto
+      ]))
+    ];
+    buildPhase = ''
+      runHook preBuild
+
+      # Debug key is "zero" and it is in use when fuses are not burned.
+      echo "0x0000000000000000000000000000000000000000000000000000000000000000" > oem_k1.key
+
+      # MY secret. Could be anything, but something simple just for testing.
+      echo "ABABABABAB" > my_secret.key
+
+      # Generate a new EKB image.
+      python3 $src/gen-ekb.py -chip t234 -oem_k1_key oem_k1.key -in_my_secret my_secret.key -out eks_t234.img
+
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+      mkdir $out
+      cp eks_t234.img $out/eks_t234.img
+      runHook postInstall
+    '';
+  };
+
   images = config.system.build.${config.formatAttr};
   partitionsEmmc = pkgs.writeText "sdmmc.xml" ''
     <partition name="master_boot_record" type="protective_master_boot_record">
@@ -122,6 +161,9 @@ in
         echo "Removing bootlodaer/esp.img if it exists ..."
         rm -fv "$WORKDIR/bootloader/esp.img"
         mkdir -pv "$WORKDIR/bootloader"
+
+        # Replace ekb image with ekb image, which contains "my secret"
+        cp ${genekb}/eks_t234.img "$WORKDIR/bootloader"
 
         # See https://developer.download.nvidia.com/embedded/L4T/r35_Release_v4.1/docs/Jetson_Linux_Release_Notes_r35.4.1.pdf
         # and https://developer.download.nvidia.com/embedded/L4T/r35_Release_v5.0/docs/Jetson_Linux_Release_Notes_r35.5.0.pdf

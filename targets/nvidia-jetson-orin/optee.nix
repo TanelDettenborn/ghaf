@@ -31,7 +31,35 @@ _:
 
         sha256 = "sha256-YIkONwvQ3PYF12PcGlX+C4/wlo4n12rrQI3PLnK408k=";
       };
-      patches = [ ./0001-ta-pkcs11-Build-time-option-for-controlling-pin-lock.patch ];
+      patches = [
+        ./0001-ta-pkcs11-Build-time-option-for-controlling-pin-lock.patch
+      ];
+    };
+
+    poc-ekb-host = stdenv.mkDerivation {
+      name = "pocekbhost";
+      src = ./poc_ekb;
+      PACKAGES_PATH = [ "${opteeClient}" ];
+      buildCommand = ''
+           $CC "$src"/host/main.c -o poc-ekb -I ${opteeClient}/include/ -I "$src"/ta/include -lteec -L ${opteeClient}/lib
+           install -D poc-ekb "$out/bin/poc-ekb"
+      '';
+    };
+
+    poc-ekb-ta = stdenv.mkDerivation {
+      name = "pocekbta";
+      src = ./poc_ekb/ta;
+      nativeBuildInputs = [(pkgs.buildPackages.python3.withPackages (p: [p.cryptography]))];
+      makeFlags = [
+        "CROSS_COMPILE=${pkgs.stdenv.cc.targetPrefix}"
+        "TA_DEV_KIT_DIR=${taDevKit}/export-ta_arm64"
+        "O=$(PWD)/out"
+      ];
+      installPhase = ''
+         runHook preInstall
+         install -Dm755 -t $out out/12345678-1234-1234-1122-334455667788.ta
+         runHook postInstall
+      '';
     };
 
     opteeXtest = stdenv.mkDerivation {
@@ -106,6 +134,7 @@ _:
     '';
   in
   {
+    hardware.nvidia-jetpack.firmware.optee.patches = [ ./0001-core-Add-my_secret-to-jetson_user_pta_key-pTA.patch ];
     hardware.nvidia-jetpack.firmware.optee.supplicant.trustedApplications =
       let
         xTestTaDir = "${opteeXtest}/ta";
@@ -167,13 +196,19 @@ _:
           name = "fd02c9da-306c-48c7-a49c-bbd827ae86ee.ta";
           path = "${pcks11Ta}/fd02c9da-306c-48c7-a49c-bbd827ae86ee.ta";
         };
+        ekbpocTaPath = {
+          name = "12345678-1234-1234-1122-334455667788.ta";
+          path = "${poc-ekb-ta}/12345678-1234-1234-1122-334455667788.ta";
+        };
         paths =
+          [ ekbpocTaPath ] ++
           lib.optionals config.ghaf.hardware.nvidia.orin.optee.xtest xTestTaPaths
           ++ lib.optional config.ghaf.hardware.nvidia.orin.optee.pkcs11.enable pkcs11TaPath;
       in
       [ (pkgs.linkFarm "optee-load-path" paths) ];
 
     environment.systemPackages =
+      [ poc-ekb-host ] ++
       (lib.optional config.ghaf.hardware.nvidia.orin.optee.pkcs11-tool pkcs11-tool-optee)
       ++ (lib.optional config.ghaf.hardware.nvidia.orin.optee.xtest opteeXtest);
   }
