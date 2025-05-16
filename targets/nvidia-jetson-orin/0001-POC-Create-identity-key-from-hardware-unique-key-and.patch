@@ -1,0 +1,99 @@
+From 3544c84891f86113fdf0cd5bff32f8652a36baf0 Mon Sep 17 00:00:00 2001
+From: Tanel Dettenborn <tanel@ssrc.tii.ae>
+Date: Fri, 16 May 2025 15:33:08 +0300
+Subject: [PATCH] POC: Create identity key from hardware unique key and print
+ result
+
+Signed-off-by: Tanel Dettenborn <tanel@ssrc.tii.ae>
+---
+ .../core/pta/tegra/jetson_user_key_pta.c      | 55 +++++++++++++++++++
+ .../lib/libutee/include/pta_jetson_user_key.h |  2 +
+ 2 files changed, 57 insertions(+)
+
+diff --git a/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c b/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
+index a5c060c84..1a50d7846 100644
+--- a/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
++++ b/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
+@@ -890,6 +890,59 @@ error:
+ 	return rc;
+ }
+ 
++static TEE_Result jetson_pta_poc_gen_identity_key(uint32_t ptypes,
++												  TEE_Param params[TEE_NUM_PARAMS])
++{
++	uint32_t exp_pt = TEE_PARAM_TYPES(TEE_PARAM_TYPE_NONE,
++					  TEE_PARAM_TYPE_NONE,
++					  TEE_PARAM_TYPE_NONE,
++					  TEE_PARAM_TYPE_NONE);
++	TEE_Result rc = TEE_SUCCESS;
++	struct tee_hw_unique_key hwkey = { };
++	uint8_t idenity_key[48] = {};
++	uint8_t *my_idenity_ctx_str = "my_idenity_ctx_str";
++	uint8_t *my_idenity_label_str = "my_idenity_label_str";
++	uint8_t *tmpptr = NULL;
++	int k = 0;
++
++	params = params;
++
++	if (exp_pt != ptypes) {
++		EMSG("jetson_pta_poc_gen_identity_key: Not expected parameters");
++		return TEE_ERROR_BAD_PARAMETERS;
++	}
++
++	rc = tee_otp_get_hw_unique_key(&hwkey);
++	if (rc != TEE_SUCCESS) {
++		EMSG("jetson_pta_poc_gen_identity_key: failed to hw unique key\n");
++		return rc;
++	}
++
++	rc = nist_sp_800_108_cmac_kdf(hwkey.data,
++								  HW_UNIQUE_KEY_LENGTH,
++								  my_idenity_ctx_str,
++								  strlen(my_idenity_ctx_str),
++								  my_idenity_label_str,
++								  strlen(my_idenity_label_str),
++								  48,
++								  idenity_key);
++
++	// Extra paranoia (should use random data)
++	memset(hwkey.data, 'A', HW_UNIQUE_KEY_LENGTH);
++
++	if (rc != TEE_SUCCESS) {
++		EMSG("jetson_pta_poc_gen_identity_key: key derivation failed\n");
++		return rc;
++	}
++	// For the sake of POC
++	tmpptr = idenity_key;
++	for (k = 0; k < 48; ++k) {
++		EMSG("identity key: unit[%u] hex[%x]\n", tmpptr[k], tmpptr[k]);
++	}
++
++	return rc;
++}
++
+ static TEE_Result invoke_command(void *psess __unused,
+ 				 uint32_t cmd, uint32_t ptypes,
+ 				 TEE_Param params[TEE_NUM_PARAMS])
+@@ -916,6 +969,8 @@ static TEE_Result invoke_command(void *psess __unused,
+ 		return jetson_pta_decrypt_cpubl_payload(ptypes, params);
+ 	case JETSON_USER_KEY_CMD_GET_MY_SECRET:
+ 		return jetson_pta_get_my_secret(ptypes, params);
++	case JETSON_USER_KEY_CMD_POC_GEN_IDENTITY_KEY:
++		return jetson_pta_poc_gen_identity_key(ptypes, params);
+ 	default:
+ 		return TEE_ERROR_NOT_SUPPORTED;
+ 	}
+diff --git a/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h b/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h
+index 79204d5c3..e97917a13 100644
+--- a/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h
++++ b/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h
+@@ -105,4 +105,6 @@ typedef enum {
+ 
+ #define JETSON_USER_KEY_CMD_GET_MY_SECRET 8
+ 
++#define JETSON_USER_KEY_CMD_POC_GEN_IDENTITY_KEY 9
++
+ #endif
+-- 
+2.47.2
+

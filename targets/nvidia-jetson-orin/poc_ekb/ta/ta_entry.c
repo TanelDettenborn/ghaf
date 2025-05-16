@@ -34,33 +34,14 @@ void TA_CloseSessionEntryPoint(void *sess_ptr)
     EMSG("#!# ekb-poc: TA_CloseSessionEntryPoint");
 }
 
-TEE_Result TA_InvokeCommandEntryPoint(void *session_id,
-                                      uint32_t command_id,
-                                      uint32_t parameters_type,
-                                      TEE_Param parameters[4])
+TEE_Result invoke_poc_ekb(TEE_TASessionHandle *sess)
 {
     TEE_Result rv = TEE_ERROR_GENERIC;
-    TEE_TASessionHandle sess = TEE_HANDLE_NULL;
     uint32_t rv_org = 0;
     uint32_t params_type = 0;
     TEE_Param params[TEE_NUM_PARAMS] = {0};
     uint8_t my_secret[128] = {0};
 
-    // Unused
-    session_id = session_id;
-    command_id = command_id;
-    parameters = parameters;
-    parameters_type = parameters_type;
-
-    EMSG("ekb-poc: TA_InvokeCommandEntryPoint: Starting to fetch my secret..");
-
-    rv = TEE_OpenTASession(&(const TEE_UUID)JETSON_USER_KEY_TA_UUID,
-                            TEE_TIMEOUT_INFINITE, 0, NULL, &sess,
-                            &rv_org);
-    if (rv) {
-        EMSG("ekb-poc: TEE_OpenTASession failed rv[0x%08x]; rv_org[%u]\n", rv, rv_org);
-        return rv;
-    }
 
     // NOTE: Not a good idea, because secret should not leave from PTA
     // This is done for the POC.
@@ -83,6 +64,54 @@ TEE_Result TA_InvokeCommandEntryPoint(void *session_id,
             EMSG("%02X", my_secret[i]);
         }
     }
+
+    return rv;
+}
+
+TEE_Result invoke_poc_idenity_key(TEE_TASessionHandle *sess)
+{
+    TEE_Result rv = TEE_ERROR_GENERIC;
+    uint32_t rv_org = 0;
+    uint32_t params_type = 0;
+
+    params_type = TEE_PARAM_TYPES(TEE_PARAM_TYPE_NONE,
+                                  TEE_PARAM_TYPE_NONE,
+                                  TEE_PARAM_TYPE_NONE,
+                                  TEE_PARAM_TYPE_NONE);
+
+    rv = TEE_InvokeTACommand(sess, TEE_TIMEOUT_INFINITE,
+                              JETSON_USER_KEY_CMD_POC_GEN_IDENTITY_KEY,
+                              params_type, NULL, &rv_org);
+    if (rv) {
+        EMSG("ekb-poc: TEE_InvokeTACommand failed rv[0x%08x]; rv_org[%u]\n", rv, rv_org);
+    }
+
+    return rv;
+}
+
+TEE_Result TA_InvokeCommandEntryPoint(void *session_id,
+                                      uint32_t command_id,
+                                      uint32_t parameters_type,
+                                      TEE_Param parameters[4])
+{
+    TEE_Result rv = TEE_ERROR_GENERIC;
+    TEE_TASessionHandle sess = TEE_HANDLE_NULL;
+    uint32_t rv_org = 0;
+    // Unused
+    session_id = session_id;
+    command_id = command_id;
+    parameters = parameters;
+    parameters_type = parameters_type;
+
+    rv = TEE_OpenTASession(&(const TEE_UUID)JETSON_USER_KEY_TA_UUID,
+                            TEE_TIMEOUT_INFINITE, 0, NULL, &sess,
+                            &rv_org);
+    if (rv) {
+        EMSG("ekb-poc: TEE_OpenTASession failed rv[0x%08x]; rv_org[%u]\n", rv, rv_org);
+        return rv;
+    }
+    // rv = invoke_poc_ekb(sess);
+    rv = invoke_poc_idenity_key(sess);
 
     TEE_CloseTASession(sess);
 

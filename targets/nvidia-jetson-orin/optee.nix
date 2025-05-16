@@ -134,7 +134,10 @@ _:
     '';
   in
   {
-    hardware.nvidia-jetpack.firmware.optee.patches = [ ./0001-core-Add-my_secret-to-jetson_user_pta_key-pTA.patch ];
+    hardware.nvidia-jetpack.firmware.optee.patches = [
+      ./0001-core-Add-my_secret-to-jetson_user_pta_key-pTA.patch
+      ./0001-POC-Create-identity-key-from-hardware-unique-key-and.patch
+    ];
     hardware.nvidia-jetpack.firmware.optee.supplicant.trustedApplications =
       let
         xTestTaDir = "${opteeXtest}/ta";
