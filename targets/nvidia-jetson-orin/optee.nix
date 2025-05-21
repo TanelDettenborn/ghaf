@@ -106,6 +106,9 @@ _:
     '';
   in
   {
+    hardware.nvidia-jetpack.firmware.optee.patches = [
+      ./0001-POC-jetson-user-key-pta-generates-identity-key-and-e.patch
+    ];
     hardware.nvidia-jetpack.firmware.optee.supplicant.trustedApplications =
       let
         xTestTaDir = "${opteeXtest}/ta";
