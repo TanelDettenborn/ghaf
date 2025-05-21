@@ -31,7 +31,51 @@ _:
 
         sha256 = "sha256-YIkONwvQ3PYF12PcGlX+C4/wlo4n12rrQI3PLnK408k=";
       };
-      patches = [ ./0001-ta-pkcs11-Build-time-option-for-controlling-pin-lock.patch ];
+      patches = [
+        ./0001-ta-pkcs11-Build-time-option-for-controlling-pin-lock.patch
+        ./0001-POC-Identity-key-pkcs11-fetches-key-from-pta.patch
+      ];
+    };
+
+    export-identity-key = pkgs.writeShellScriptBin "export-identity-key" ''
+    echo "-----BEGIN EC PRIVATE KEY-----
+MIGkAgEBBDD1E1YQQireAt3XudP3UM2DeDOrpe1AF1iBKWASOYDV9dvHvCawskdM
++eme3TdG5SagBwYFK4EEACKhZANiAAQIvZAp2scSf4xaNSoPibKs5QE4WqCJZDw7
+tr/bODcUr6cmpUPLkpWzk7E2puv74d9vgArpsoUViW+0ZC1wjoLz40+fhNCCks7F
+wYG4pkP1P7EQawhz5witbe+nPBm2Edc=
+-----END EC PRIVATE KEY-----
+" > ec_identity_fetch_trigger.pem
+
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so --init-token --label mytoken --so-pin 1234
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so --label mytoken --login --so-pin 1234 --init-pin --pin 0000
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so --pin 0000 --write-object ec_identity_fetch_trigger.pem --type privkey --label "identity-poc"
+      rm ec_identity_fetch_trigger.pem
+    '';
+
+    poc-identity-key-host = stdenv.mkDerivation {
+      name = "pocidenitykeyhost";
+      src = ./poc-identity-key;
+      PACKAGES_PATH = [ "${opteeClient}" ];
+      buildCommand = ''
+           $CC "$src"/host/main.c -o poc-identity-key -I ${opteeClient}/include/ -I "$src"/ta/include -lteec -L ${opteeClient}/lib
+           install -D poc-identity-key "$out/bin/poc-identity-key"
+      '';
+    };
+
+    poc-identity-key-ta = stdenv.mkDerivation {
+      name = "pocidenitykeyta";
+      src = ./poc-identity-key/ta;
+      nativeBuildInputs = [(pkgs.buildPackages.python3.withPackages (p: [p.cryptography]))];
+      makeFlags = [
+        "CROSS_COMPILE=${pkgs.stdenv.cc.targetPrefix}"
+        "TA_DEV_KIT_DIR=${taDevKit}/export-ta_arm64"
+        "O=$(PWD)/out"
+      ];
+      installPhase = ''
+         runHook preInstall
+         install -Dm755 -t $out out/12345678-1234-1234-1122-334455667788.ta
+         runHook postInstall
+      '';
     };
 
     opteeXtest = stdenv.mkDerivation {
@@ -170,13 +214,19 @@ _:
           name = "fd02c9da-306c-48c7-a49c-bbd827ae86ee.ta";
           path = "${pcks11Ta}/fd02c9da-306c-48c7-a49c-bbd827ae86ee.ta";
         };
+        identityKeyTaPath = {
+          name = "12345678-1234-1234-1122-334455667788.ta";
+          path = "${poc-identity-key-ta}/12345678-1234-1234-1122-334455667788.ta";
+        };
         paths =
+          [ identityKeyTaPath ] ++
           lib.optionals config.ghaf.hardware.nvidia.orin.optee.xtest xTestTaPaths
           ++ lib.optional config.ghaf.hardware.nvidia.orin.optee.pkcs11.enable pkcs11TaPath;
       in
       [ (pkgs.linkFarm "optee-load-path" paths) ];
 
     environment.systemPackages =
+      [ poc-identity-key-host export-identity-key ] ++
       (lib.optional config.ghaf.hardware.nvidia.orin.optee.pkcs11-tool pkcs11-tool-optee)
       ++ (lib.optional config.ghaf.hardware.nvidia.orin.optee.xtest opteeXtest);
   }
