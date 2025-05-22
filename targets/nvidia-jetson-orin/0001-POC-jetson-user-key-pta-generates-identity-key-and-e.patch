@@ -1,19 +1,19 @@
-From fe895b9eb665c3846287976cb918c4f098c596ec Mon Sep 17 00:00:00 2001
+From 86ee534871b30cf10974f892a36ddceb40f6ae90 Mon Sep 17 00:00:00 2001
 From: Tanel Dettenborn <tanel@ssrc.tii.ae>
 Date: Wed, 21 May 2025 11:58:11 +0300
 Subject: [PATCH] POC: jetson user key pta generates identity key and export
 
 Signed-off-by: Tanel Dettenborn <tanel@ssrc.tii.ae>
 ---
- .../core/pta/tegra/jetson_user_key_pta.c      | 62 +++++++++++++++++++
+ .../core/pta/tegra/jetson_user_key_pta.c      | 70 +++++++++++++++++++
  .../lib/libutee/include/pta_jetson_user_key.h |  2 +
- 2 files changed, 64 insertions(+)
+ 2 files changed, 72 insertions(+)
 
 diff --git a/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c b/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
-index 5d60b73b5..a91b1cc02 100644
+index 5d60b73b5..46785425c 100644
 --- a/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
 +++ b/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
-@@ -857,6 +857,66 @@ error:
+@@ -857,6 +857,74 @@ error:
  	return rc;
  }
  
@@ -26,10 +26,18 @@ index 5d60b73b5..a91b1cc02 100644
 +                                         TEE_PARAM_TYPE_NONE);
 +       TEE_Result rc = TEE_SUCCESS;
 +       struct tee_hw_unique_key hwkey = { };
-+       const uint8_t *my_idenity_ctx_str = "my_idenity_ctx_str";
-+       const uint8_t *my_idenity_label_str = "my_idenity_label_str";
++       const char *my_idenity_ctx_str = "my_idenity_ctx_str";
++       const char *my_idenity_label_str = "my_idenity_label_str";
 +       uint8_t *tmpptr = NULL;
 +       int k = 0;
++	   struct ts_session *s = NULL;
++	   TEE_UUID pkcs11_ta_uuid = { 0xfd02c9da, 0x306c, 0x48c7, { 0xa4, 0x9c, 0xbb, 0xd8, 0x27, 0xae, 0x86, 0xee } };
++
++	   s = ts_get_calling_session();
++	   if (!s || !is_user_ta_ctx(s->ctx) || memcmp(&s->ctx->uuid, &pkcs11_ta_uuid, sizeof(TEE_UUID))) {
++		   EMSG("jetson_pta_poc_gen_and_get_identity_key: Restricted only for PKCS11 TA");
++		   return TEE_ERROR_BAD_PARAMETERS;
++	   }
 +
 +       if (exp_pt != ptypes) {
 +               EMSG("jetson_pta_poc_gen_and_getidentity_key: Not expected parameters");
@@ -80,7 +88,7 @@ index 5d60b73b5..a91b1cc02 100644
  static TEE_Result invoke_command(void *psess __unused,
  				 uint32_t cmd, uint32_t ptypes,
  				 TEE_Param params[TEE_NUM_PARAMS])
-@@ -881,6 +941,8 @@ static TEE_Result invoke_command(void *psess __unused,
+@@ -881,6 +949,8 @@ static TEE_Result invoke_command(void *psess __unused,
  		return jetson_pta_is_user_key_exists(ptypes, params);
  	case JETSON_USER_KEY_CMD_DECRYPT_CPUBL_PAYLOAD:
  		return jetson_pta_decrypt_cpubl_payload(ptypes, params);
