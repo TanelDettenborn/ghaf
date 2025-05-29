@@ -1,0 +1,246 @@
+From 8c66d1255fb117ff1b9c1892f7936ee0291be247 Mon Sep 17 00:00:00 2001
+From: Tanel Dettenborn <tanel@ssrc.tii.ae>
+Date: Fri, 23 May 2025 12:28:05 +0300
+Subject: [PATCH] POC pkcs11 fetches identity key from pta
+
+Signed-off-by: Tanel Dettenborn <tanel@ssrc.tii.ae>
+---
+ optee/optee_os/ta/pkcs11/src/attributes.c    |  21 ++++
+ optee/optee_os/ta/pkcs11/src/processing.c    |  17 ++-
+ optee/optee_os/ta/pkcs11/src/processing.h    |   3 +-
+ optee/optee_os/ta/pkcs11/src/processing_ec.c | 112 ++++++++++++++++++-
+ 4 files changed, 148 insertions(+), 5 deletions(-)
+
+diff --git a/optee/optee_os/ta/pkcs11/src/attributes.c b/optee/optee_os/ta/pkcs11/src/attributes.c
+index 8f6071c15..5b110f87b 100644
+--- a/optee/optee_os/ta/pkcs11/src/attributes.c
++++ b/optee/optee_os/ta/pkcs11/src/attributes.c
+@@ -18,6 +18,16 @@
+ #include "pkcs11_helpers.h"
+ #include "serializer.h"
+ 
++static void pri_buf(const char *title, uint32_t id, uint8_t *ptr, size_t len)
++{
++	size_t k = 0;
++
++	EMSG("DEBUG_print :: title[%s]; id[%x]; len[%lu]", title, id, len);
++	for (k = 0; k < len; ++k) {
++		EMSG("DEBUG_print :: id[%x] [%x]\n",id, ptr[k]);
++	}
++}
++
+ enum pkcs11_rc init_attributes_head(struct obj_attrs **head)
+ {
+ 	*head = TEE_Malloc(sizeof(**head), TEE_MALLOC_FILL_ZERO);
+@@ -35,6 +45,17 @@ enum pkcs11_rc add_attribute(struct obj_attrs **head, uint32_t attribute,
+ 	enum pkcs11_rc rc = PKCS11_CKR_OK;
+ 	uint32_t data32 = 0;
+ 
++	// TODO: REMOVE
++	// These print only make sense for identity key generation!!
++	if (attribute == PKCS11_CKA_VALUE)
++		pri_buf("add_attribute(PKCS11_CKA_VALUE)", attribute,data,size);
++	else if (attribute == PKCS11_CKA_OPTEE_HIDDEN_EC_POINT)
++		pri_buf("add_attribute(PKCS11_CKA_OPTEE_HIDDEN_EC_POINT)", attribute,data,size);
++	else if (attribute == PKCS11_CKA_EC_POINT)
++		pri_buf("add_attribute(PKCS11_CKA_EC_POINT)", attribute,data,size);
++	else if (attribute == PKCS11_CKA_EC_PARAMS)
++		pri_buf("add_attribute(PKCS11_CKA_EC_PARAMS)", attribute,data,size);
++
+ 	data32 = attribute;
+ 	rc = serialize(bstart, &buf_len, &data32, sizeof(uint32_t));
+ 	if (rc)
+diff --git a/optee/optee_os/ta/pkcs11/src/processing.c b/optee/optee_os/ta/pkcs11/src/processing.c
+index 6ce078dca..65d63d24c 100644
+--- a/optee/optee_os/ta/pkcs11/src/processing.c
++++ b/optee/optee_os/ta/pkcs11/src/processing.c
+@@ -418,6 +418,13 @@ enum pkcs11_rc entry_generate_key_pair(struct pkcs11_client *client,
+ 	uint32_t privkey_handle = 0;
+ 	uint32_t *hdl_ptr = NULL;
+ 	size_t out_ref_size = sizeof(pubkey_handle) + sizeof(privkey_handle);
++	// Identity key additions
++	uint32_t label_len = 32;
++	uint8_t label[32] = {};
++	// NOTE: identity_key_trigger_label Lenght hardcoded below!!
++	// GP API does not have strlen
++	const char *identity_key_trigger_label = "Drone-HW-derived-identity-key";//see NOTE
++	uint32_t  generate_identity_key = 0;
+ 
+ 	if (!client || ptypes != exp_pt || out->memref.size != out_ref_size)
+ 		return PKCS11_CKR_ARGUMENTS_BAD;
+@@ -517,13 +524,21 @@ enum pkcs11_rc entry_generate_key_pair(struct pkcs11_client *client,
+ 	if (rc)
+ 		goto out;
+ 
++	rc = get_attribute(pub_head, PKCS11_CKA_LABEL, label, &label_len);
++	if (rc == PKCS11_CKR_OK &&
++		label_len == 29 &&
++		TEE_MemCompare(label, identity_key_trigger_label, label_len) == 0) {
++		generate_identity_key = 1;
++		EMSG("Identity key generation triggered");
++	}
++
+ 	/* Generate key pair */
+ 	switch (proc_params->id) {
+ 	case PKCS11_CKM_EC_EDWARDS_KEY_PAIR_GEN:
+ 		rc = generate_eddsa_keys(proc_params, &pub_head, &priv_head);
+ 		break;
+ 	case PKCS11_CKM_EC_KEY_PAIR_GEN:
+-		rc = generate_ec_keys(proc_params, &pub_head, &priv_head);
++		rc = generate_ec_keys(proc_params, &pub_head, &priv_head, generate_identity_key);
+ 		break;
+ 	case PKCS11_CKM_RSA_PKCS_KEY_PAIR_GEN:
+ 		rc = generate_rsa_keys(proc_params, &pub_head, &priv_head);
+diff --git a/optee/optee_os/ta/pkcs11/src/processing.h b/optee/optee_os/ta/pkcs11/src/processing.h
+index 54432660e..8fb1b82d9 100644
+--- a/optee/optee_os/ta/pkcs11/src/processing.h
++++ b/optee/optee_os/ta/pkcs11/src/processing.h
+@@ -222,7 +222,8 @@ enum pkcs11_rc pkcs2tee_algo_ecdsa(uint32_t *tee_id,
+ 
+ enum pkcs11_rc generate_ec_keys(struct pkcs11_attribute_head *proc_params,
+ 				struct obj_attrs **pub_head,
+-				struct obj_attrs **priv_head);
++				struct obj_attrs **priv_head,
++				size_t generate_identity_key);
+ 
+ enum pkcs11_rc generate_eddsa_keys(struct pkcs11_attribute_head *proc_params,
+ 				   struct obj_attrs **pub_head,
+diff --git a/optee/optee_os/ta/pkcs11/src/processing_ec.c b/optee/optee_os/ta/pkcs11/src/processing_ec.c
+index adf9b5e09..485704e8f 100644
+--- a/optee/optee_os/ta/pkcs11/src/processing_ec.c
++++ b/optee/optee_os/ta/pkcs11/src/processing_ec.c
+@@ -586,9 +586,111 @@ out:
+ 	return rc;
+ }
+ 
++
++#define JETSON_USER_KEY_TA_UUID \
++	{ 0xe9e156e8, 0xe161, 0x4c8a, \
++		{0x91, 0xa9, 0x0b, 0xba, 0x5e, 0x24, 0x7e, 0xe8} }
++#define JETSON_USER_KEY_CMD_POC_GEN_AND_GET_IDENTITY_KEY 10
++
++static TEE_Result fetch_create_identity_key_obj(TEE_ObjectHandle ident_key_obj,
++												uint32_t ident_key_size_bit,
++												uint32_t ident_curve)
++{
++	TEE_Result rv = TEE_ERROR_GENERIC;
++    TEE_TASessionHandle sess = TEE_HANDLE_NULL;
++    uint32_t rv_org = 0, ident_key_size_byte = 0;
++	uint32_t ta2ta_params_type = 0;
++	TEE_Param ta2ta_params[TEE_NUM_PARAMS] = {0};
++	void *d_ptr = NULL, *x_ptr = NULL, *y_ptr = NULL;
++	size_t d_size = 0, x_size = 0, y_size = 0;
++	TEE_Attribute identity_key_attr[4] = { };
++
++	ident_key_size_byte = ident_key_size_bit/8;
++
++	// For the sake of sanity only supporting:
++	// * TEE_ECC_CURVE_NIST_P384
++	// * 384 bit size key
++	// Could be generalised to all keys!
++	if (ident_key_size_byte != 48) {
++		// TODO: POC prints nice error message. Remove for production.
++		EMSG("Only supported identity key size is 384bit (48byte)");
++		return TEE_ERROR_NOT_SUPPORTED;
++	}
++
++	if (ident_curve != TEE_ECC_CURVE_NIST_P384) {
++		// TODO: POC prints nice error message. Remove for production.
++		EMSG("Only supported identity key curve is TEE_ECC_CURVE_NIST_P384");
++		return TEE_ERROR_NOT_SUPPORTED;
++	}
++
++	// All EC key are same size, but for clarity all has own variable
++	d_size = ident_key_size_byte;
++	x_size = ident_key_size_byte;
++	y_size = ident_key_size_byte;
++
++	d_ptr = TEE_Malloc(d_size, TEE_USER_MEM_HINT_NO_FILL_ZERO);
++	x_ptr = TEE_Malloc(x_size, TEE_USER_MEM_HINT_NO_FILL_ZERO);
++	y_ptr = TEE_Malloc(y_size, TEE_USER_MEM_HINT_NO_FILL_ZERO);
++
++	if (d_ptr == NULL || x_ptr == NULL || y_ptr == NULL) {
++		// Out of memory and below might not get printed
++		EMSG("Out of memory d_ptr[%p]; x_ptr[%p]; y_ptr[%p];", d_ptr, x_ptr, y_ptr);
++		rv = TEE_ERROR_OUT_OF_MEMORY;
++		goto out;
++	}
++
++	TEE_InitValueAttribute(&identity_key_attr[0], TEE_ATTR_ECC_CURVE, ident_curve, 0);
++	TEE_InitRefAttribute(&identity_key_attr[1], TEE_ATTR_ECC_PRIVATE_VALUE, d_ptr, d_size);
++	TEE_InitRefAttribute(&identity_key_attr[2], TEE_ATTR_ECC_PUBLIC_VALUE_X, x_ptr, x_size);
++	TEE_InitRefAttribute(&identity_key_attr[3], TEE_ATTR_ECC_PUBLIC_VALUE_Y, y_ptr, y_size);
++
++
++    rv = TEE_OpenTASession(&(const TEE_UUID)JETSON_USER_KEY_TA_UUID,
++                            TEE_TIMEOUT_INFINITE, 0, NULL, &sess,
++                            &rv_org);
++    if (rv) {
++        EMSG("TEE_OpenTASession failed rv[0x%08x]; rv_org[%u]\n", rv, rv_org);
++		goto out;
++    }
++
++	ta2ta_params_type = TEE_PARAM_TYPES(TEE_PARAM_TYPE_MEMREF_OUTPUT,
++										TEE_PARAM_TYPE_MEMREF_OUTPUT,
++										TEE_PARAM_TYPE_MEMREF_OUTPUT,
++										TEE_PARAM_TYPE_NONE);
++	ta2ta_params[0].memref.buffer = d_ptr;
++	ta2ta_params[0].memref.size = d_size;
++	ta2ta_params[1].memref.buffer = x_ptr;
++	ta2ta_params[1].memref.size = x_size;
++	ta2ta_params[2].memref.buffer = y_ptr;
++	ta2ta_params[2].memref.size = y_size;
++	rv = TEE_InvokeTACommand(sess, TEE_TIMEOUT_INFINITE,
++							 JETSON_USER_KEY_CMD_POC_GEN_AND_GET_IDENTITY_KEY,
++							 ta2ta_params_type, ta2ta_params, &rv_org);
++	if (rv) {
++        EMSG("TEE_InvokeTACommand failed rv[0x%08x]; rv_org[%u]\n", rv, rv_org);
++		goto out;
++	}
++
++	rv = TEE_PopulateTransientObject(ident_key_obj, identity_key_attr, 4);
++	if (rv) {
++		EMSG("TEE_PopulateTransientObject failed rv[0x%08x]; rv_org[%u]\n", rv, rv_org);
++		goto out;
++	}
++
++out:
++	if (d_ptr)
++		TEE_MemFill(d_ptr, 0, d_size);
++	TEE_Free(d_ptr);
++	TEE_Free(x_ptr);
++	TEE_Free(y_ptr);
++    TEE_CloseTASession(sess);
++    return rv;
++}
++
+ enum pkcs11_rc generate_ec_keys(struct pkcs11_attribute_head *proc_params,
+ 				struct obj_attrs **pub_head,
+-				struct obj_attrs **priv_head)
++				struct obj_attrs **priv_head,
++				size_t generate_identity_key)
+ {
+ 	enum pkcs11_rc rc = PKCS11_CKR_GENERAL_ERROR;
+ 	void *a_ptr = NULL;
+@@ -639,12 +741,16 @@ enum pkcs11_rc generate_ec_keys(struct pkcs11_attribute_head *proc_params,
+ 		goto out;
+ 	}
+ 
+-	res = TEE_GenerateKey(tee_obj, tee_size, tee_key_attr, 1);
++	if (generate_identity_key) {
++		res = fetch_create_identity_key_obj(tee_obj, tee_size, tee_curve);
++	} else {
++		res = TEE_GenerateKey(tee_obj, tee_size, tee_key_attr, 1);
++	}
++
+ 	if (res) {
+ 		rc = tee2pkcs_error(res);
+ 		goto out;
+ 	}
+-
+ 	/* Private key needs the same EC_PARAMS as used by the public key */
+ 	rc = add_attribute(priv_head, PKCS11_CKA_EC_PARAMS, a_ptr, a_size);
+ 	if (rc)
+-- 
+2.47.2
+
