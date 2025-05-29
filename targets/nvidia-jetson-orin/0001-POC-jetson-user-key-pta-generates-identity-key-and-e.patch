@@ -1,0 +1,398 @@
+From 2d7f90230af023b7f1ad7693ae4de34eb6a82f30 Mon Sep 17 00:00:00 2001
+From: Tanel Dettenborn <tanel@ssrc.tii.ae>
+Date: Thu, 29 May 2025 23:24:26 +0300
+Subject: [PATCH] POC: jetson user key pta generates identity key and export
+
+Signed-off-by: Tanel Dettenborn <tanel@ssrc.tii.ae>
+---
+ .../core/pta/tegra/jetson_user_key_pta.c      | 346 ++++++++++++++++++
+ .../lib/libutee/include/pta_jetson_user_key.h |   2 +
+ 2 files changed, 348 insertions(+)
+
+diff --git a/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c b/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
+index 5d60b73b5..a10cc72f1 100644
+--- a/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
++++ b/optee/optee_os/core/pta/tegra/jetson_user_key_pta.c
+@@ -3,8 +3,11 @@
+  * Copyright (c) 2021-2024, NVIDIA CORPORATION & AFFILIATES.
+  */
+ 
++#define LTC_NO_PROTOTYPES
++
+ #include <config.h>
+ #include <crypto/crypto.h>
++#include <tomcrypt_private.h>
+ #include <drivers/tegra/tegra_fuse.h>
+ #include <drivers/tegra/tegra_se_aes.h>
+ #include <drivers/tegra/tegra_se_kdf.h>
+@@ -857,6 +860,347 @@ error:
+ 	return rc;
+ }
+ 
++/*
++ * NOTE: Not a real PRNG.
++ * Only purpose is to pass "entropy" bytes to ecc_generate_key function.
++ * for safety entrropy could be read only once!
++ */
++#define DUMMY_ENTROPY_LEN 48
++struct prng_dummy_state {
++	uint8_t *entropy;
++	uint32_t entropy_len;
++};
++static struct prng_dummy_state prng_dummy_s = { };
++static int prng_dummy_crypto_start(prng_state *prng __unused)
++{
++	if (prng_dummy_s.entropy != NULL)
++		return CRYPT_INVALID_ARG;
++
++	prng_dummy_s.entropy = calloc(1, DUMMY_ENTROPY_LEN);
++	if (prng_dummy_s.entropy == NULL)
++		return CRYPT_MEM;
++
++	prng_dummy_s.entropy_len = DUMMY_ENTROPY_LEN;
++	return CRYPT_OK;
++}
++
++static int prng_dummy_crypto_done(prng_state *prng __unused)
++{
++	if (prng_dummy_s.entropy == NULL)
++		return CRYPT_OK;
++
++	memset(prng_dummy_s.entropy, 0, prng_dummy_s.entropy_len);
++	free(prng_dummy_s.entropy);
++	prng_dummy_s.entropy = NULL;
++	prng_dummy_s.entropy_len = 0;
++	return CRYPT_OK;
++}
++
++
++static int prng_dummy_crypto_add_entropy(const unsigned char *in __unused,
++										 unsigned long inlen __unused,
++										 prng_state *prng __unused)
++{
++	if (prng_dummy_s.entropy == NULL)
++		return CRYPT_INVALID_ARG;
++
++	if (inlen != prng_dummy_s.entropy_len) {
++		EMSG("DEBUG print :: Dummy prng lenght");
++		return CRYPT_INVALID_ARG;
++	}
++
++	memcpy(prng_dummy_s.entropy, in, inlen);
++	return CRYPT_OK;
++}
++
++static int prng_dummy_crypto_ready(prng_state *prng __unused)
++{
++	return CRYPT_OK;
++}
++
++static unsigned long prng_dummy_crypto_read(unsigned char *out, unsigned long outlen,
++											prng_state *prng __unused)
++{
++	if (prng_dummy_s.entropy_len != outlen) {
++		EMSG("DEBUG print :: dummy prng lenght");
++		return CRYPT_INVALID_ARG;
++	}
++
++	if (prng_dummy_s.entropy == NULL) {
++		EMSG("DEBUG print :: entropy NULL (not add or already read)");
++		return CRYPT_ERROR;
++	}
++
++	memcpy(out, prng_dummy_s.entropy, prng_dummy_s.entropy_len);
++	prng_dummy_crypto_done(NULL);
++	return outlen;
++}
++
++static int prng_dummy_crypto_export(unsigned char *out __unused,
++									unsigned long *outlen __unused,
++									prng_state *prng __unused)
++{
++	return CRYPT_ERROR;
++}
++
++static int prng_dummy_crypto_import(const unsigned char *in  __unused,
++									unsigned long inlen __unused,
++									prng_state *prng __unused)
++{
++	return CRYPT_ERROR;
++}
++
++static int prng_dummy_crypto_test(void)
++{
++	return CRYPT_ERROR;
++}
++
++static const struct ltc_prng_descriptor prng_dummy_crypto_desc = {
++	.name = "prng_dummy_crypto",
++	.export_size = 0,
++	.start = prng_dummy_crypto_start,
++	.add_entropy = prng_dummy_crypto_add_entropy,
++	.ready = prng_dummy_crypto_ready,
++	.read = prng_dummy_crypto_read,
++	.done = prng_dummy_crypto_done,
++	.pexport = prng_dummy_crypto_export,
++	.pimport = prng_dummy_crypto_import,
++	.test = prng_dummy_crypto_test,
++};
++
++
++static void print_mp(const char *title, void *mp)
++{
++	unsigned int len = 0, k = 0;
++	uint8_t *tmp = NULL, *pptr = NULL;
++	int rv = 0;
++
++	len = mp_unsigned_bin_size(mp);
++	if (len == 0) {
++		EMSG("print_mp: ERROR len zero");
++		return;
++	}
++
++	tmp = malloc(len);
++	if (tmp == NULL) {
++		EMSG("print_mp: ERROR malloc NULL");
++		return;
++	}
++
++	rv = mp_to_unsigned_bin(mp, tmp);
++	if (rv != CRYPT_OK) {
++		EMSG("print_mp: ERROR mp_to_unsigned_bin[%d]", rv);
++		free(tmp);
++		return;
++	}
++
++	EMSG("DEBUG print :: %s len[%u]", title, len);
++	pptr = tmp;
++	for (k = 0; k < 48; ++k) {
++		EMSG("DEBUG print :: %s[%x]\n", title, pptr[k]);
++	}
++
++	free(tmp);
++}
++
++static TEE_Result cp_key_component_to_buf(void *mp, uint8_t *buf, size_t buf_len)
++{
++	unsigned int mp_len = 0;
++	int rv = 0;
++
++	mp_len = mp_unsigned_bin_size(mp);
++	if (mp_len == 0) {
++		EMSG("Length zero");
++		return TEE_ERROR_GENERIC;
++	}
++
++	if (mp_len > buf_len) {
++		EMSG("Short buffer");
++		return TEE_ERROR_SHORT_BUFFER;
++	}
++
++	rv = mp_to_unsigned_bin(mp, buf);
++	if (rv != CRYPT_OK) {
++		EMSG("Copy failed[%d]", rv);
++		return TEE_ERROR_GENERIC;
++	}
++
++	return TEE_SUCCESS;
++}
++
++static  TEE_Result check_session_identity_access(struct ts_session *ts_sess)
++{
++	TEE_UUID pkcs11_ta_uuid = { 0xfd02c9da, 0x306c, 0x48c7, { 0xa4, 0x9c, 0xbb, 0xd8, 0x27, 0xae, 0x86, 0xee } };
++	TEE_UUID identity_poc_ta_uuid = { 0x72e8aa54, 0xa769, 0x4b1c, { 0x92, 0x63, 0xc7, 0x45, 0x76, 0x93, 0x05, 0x0c } };
++
++	if (!ts_sess) {
++		EMSG("session is NULL");
++		return TEE_ERROR_ACCESS_DENIED;
++	}
++
++	if (!is_user_ta_ctx(ts_sess->ctx)) {
++		EMSG("Not a user TA");
++		return TEE_ERROR_ACCESS_DENIED;
++	}
++
++	if (memcmp(&ts_sess->ctx->uuid, &pkcs11_ta_uuid, sizeof(TEE_UUID)) == 0) {
++		return TEE_SUCCESS;
++	}
++
++	if (memcmp(&ts_sess->ctx->uuid, &identity_poc_ta_uuid, sizeof(TEE_UUID)) == 0) {
++		return TEE_SUCCESS;
++	}
++
++
++	EMSG("TA not allowed to access identity key");
++	return TEE_ERROR_ACCESS_DENIED;
++}
++
++static TEE_Result jetson_pta_poc_gen_and_get_identity_key(uint32_t ptypes,
++														  TEE_Param params[TEE_NUM_PARAMS])
++{
++	const uint32_t key_component_size = 48;
++	TEE_Result rv = TEE_SUCCESS;
++	struct tee_hw_unique_key hwkey = { };
++	const char *identity_key_curve = "NISTP384"; //tomcrypt name
++	const char *my_idenity_ctx_str = "my_idenity_ctx_str";
++	const char *my_idenity_label_str = "my_idenity_label_str";
++	int ltc_rv = CRYPT_ERROR;
++	uint8_t derived_hw[48] = { };
++	unsigned int derived_hw_len = 48;
++	uint32_t exp_pt = TEE_PARAM_TYPES(TEE_PARAM_TYPE_MEMREF_OUTPUT,
++									  TEE_PARAM_TYPE_MEMREF_OUTPUT,
++									  TEE_PARAM_TYPE_MEMREF_OUTPUT,
++									  TEE_PARAM_TYPE_NONE);
++	ecc_key key = { };
++	const ltc_ecc_curve *cu = NULL;
++
++	rv = check_session_identity_access(ts_get_calling_session());
++	if (rv != TEE_SUCCESS) {
++		goto out;
++	}
++
++	if (exp_pt != ptypes) {
++		EMSG("Unecpected types :: exptected[%u]; provided[%u]", exp_pt, ptypes);
++		rv = TEE_ERROR_BAD_PARAMETERS;
++		goto out;
++	}
++
++	if (params[0].memref.size < key_component_size ||
++		params[1].memref.size < key_component_size ||
++		params[2].memref.size < key_component_size) {
++		EMSG("All buffers need to be at least %u bytes", key_component_size);
++		rv = TEE_ERROR_SHORT_BUFFER;
++		goto out;
++	}
++
++	rv = tee_otp_get_hw_unique_key(&hwkey);
++	if (rv != TEE_SUCCESS) {
++		EMSG("Failed to get unique key [0x%x.]", rv);
++		goto out;
++	}
++
++	rv = nist_sp_800_108_cmac_kdf(hwkey.data,
++								  HW_UNIQUE_KEY_LENGTH,
++								  my_idenity_ctx_str,
++								  strlen(my_idenity_ctx_str),
++								  my_idenity_label_str,
++								  strlen(my_idenity_label_str),
++								  derived_hw_len,
++								  derived_hw);
++	if (rv != TEE_SUCCESS) {
++		EMSG("Identity key derivation failed with [0x%x.]", rv);
++		goto out;
++	}
++
++	ltc_rv = ecc_find_curve(identity_key_curve, &cu);
++	if (ltc_rv != CRYPT_OK) {
++		EMSG("identity curve not found; error code [%d]", ltc_rv);
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = ecc_set_curve(cu, &key);
++	if (ltc_rv != CRYPT_OK) {
++		EMSG("Failed ot set curve to key: error code [%d]", ltc_rv);
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = prng_dummy_crypto_start(NULL);
++	if (ltc_rv != CRYPT_OK) {
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = prng_dummy_crypto_add_entropy(derived_hw, derived_hw_len, NULL);
++	if (ltc_rv != CRYPT_OK) {
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = register_prng(&prng_dummy_crypto_desc);
++	if (ltc_rv == -1) {
++		EMSG("failed to register prng_dummy_crypto_desc: error code [%d]", ltc_rv);
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = ecc_generate_key(NULL, find_prng("prng_dummy_crypto"), &key);
++	if (ltc_rv != CRYPT_OK) {
++		EMSG("Key generation failed: error code [%d]", ltc_rv);
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = unregister_prng(&prng_dummy_crypto_desc);
++	if (ltc_rv != CRYPT_OK) {
++		EMSG("failed to unregister prng_dummy_crypto_descltc: error code [%d]", ltc_rv);
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	ltc_rv = prng_dummy_crypto_done(NULL);
++	if (ltc_rv != CRYPT_OK) {
++		rv = TEE_ERROR_GENERIC;
++		goto out;
++	}
++
++	rv = cp_key_component_to_buf(key.k, params[0].memref.buffer, params[0].memref.size);
++	if (rv != TEE_SUCCESS) {
++		EMSG("Failed to copy k(/d) component");
++		goto out;
++	}
++
++	rv = cp_key_component_to_buf(key.pubkey.x, params[1].memref.buffer, params[1].memref.size);
++	if (rv != TEE_SUCCESS) {
++		EMSG("Failed to copy x component");
++		goto out;
++	}
++
++	rv = cp_key_component_to_buf(key.pubkey.y, params[2].memref.buffer, params[2].memref.size);
++	if (rv != TEE_SUCCESS) {
++		EMSG("Failed to copy y component");
++		goto out;
++	}
++
++	// TODO: Remove when working
++	print_mp("key(k/d)", key.k);
++	print_mp("key(x)", key.pubkey.x);
++	print_mp("key(y)", key.pubkey.y);
++
++
++out:
++	ecc_free(&key);
++	prng_dummy_crypto_done(NULL);
++	unregister_prng(&prng_dummy_crypto_desc);
++
++	// Extra paranoia (should use random data)
++	memset(hwkey.data, 'A', derived_hw_len);
++
++	return rv;
++}
++
+ static TEE_Result invoke_command(void *psess __unused,
+ 				 uint32_t cmd, uint32_t ptypes,
+ 				 TEE_Param params[TEE_NUM_PARAMS])
+@@ -881,6 +1225,8 @@ static TEE_Result invoke_command(void *psess __unused,
+ 		return jetson_pta_is_user_key_exists(ptypes, params);
+ 	case JETSON_USER_KEY_CMD_DECRYPT_CPUBL_PAYLOAD:
+ 		return jetson_pta_decrypt_cpubl_payload(ptypes, params);
++	case JETSON_USER_KEY_CMD_POC_GEN_AND_GET_IDENTITY_KEY:
++		return jetson_pta_poc_gen_and_get_identity_key(ptypes, params);
+ 	default:
+ 		return TEE_ERROR_NOT_SUPPORTED;
+ 	}
+diff --git a/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h b/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h
+index 790a341e1..27f5f8137 100644
+--- a/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h
++++ b/optee/optee_os/lib/libutee/include/pta_jetson_user_key.h
+@@ -103,4 +103,6 @@ typedef enum {
+  */
+ #define JETSON_USER_KEY_CMD_DECRYPT_CPUBL_PAYLOAD	7
+ 
++#define JETSON_USER_KEY_CMD_POC_GEN_AND_GET_IDENTITY_KEY 10
++
+ #endif
+-- 
+2.47.2
+
