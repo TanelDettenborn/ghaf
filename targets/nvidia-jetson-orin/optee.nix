@@ -31,8 +31,19 @@ _:
 
         sha256 = "sha256-YIkONwvQ3PYF12PcGlX+C4/wlo4n12rrQI3PLnK408k=";
       };
-      patches = [ ./0001-ta-pkcs11-Build-time-option-for-controlling-pin-lock.patch ];
+      patches = [
+        ./0001-ta-pkcs11-Build-time-option-for-controlling-pin-lock.patch
+        ./0001-POC-pkcs11-fetches-identity-key-from-pta.patch
+      ];
     };
+
+    gen-exp-identity-key = pkgs.writeShellScriptBin "gen-exp-identity-key" ''
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so --init-token --label mytoken --so-pin 1234
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so --label mytoken --login --so-pin 1234 --init-pin --pin 0000
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so --token-label mytoken --pin 0000 --keypairgen --key-type EC:secp384r1 --id 11 --label Drone-HW-derived-identity-key
+
+      ${pkgs.opensc}/bin/pkcs11-tool --module ${opteeClient}/lib/libckteec.so--token-label mytoken --pin 0000 --read-object --type pubkey --label "Drone-HW-derived-identity-key" -o pub-Drone-HW-derived-identity-key.key
+    '';
 
     opteeXtest = stdenv.mkDerivation {
       pname = "optee_xtest";
@@ -106,6 +117,9 @@ _:
     '';
   in
   {
+    hardware.nvidia-jetpack.firmware.optee.patches = [
+      ./0001-POC-jetson-user-key-pta-generates-identity-key-and-e.patch
+    ];
     hardware.nvidia-jetpack.firmware.optee.supplicant.trustedApplications =
       let
         xTestTaDir = "${opteeXtest}/ta";
@@ -174,6 +188,7 @@ _:
       [ (pkgs.linkFarm "optee-load-path" paths) ];
 
     environment.systemPackages =
+      [ gen-exp-identity-key ] ++
       (lib.optional config.ghaf.hardware.nvidia.orin.optee.pkcs11-tool pkcs11-tool-optee)
       ++ (lib.optional config.ghaf.hardware.nvidia.orin.optee.xtest opteeXtest);
   }
