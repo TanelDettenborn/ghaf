@@ -6,7 +6,7 @@
 {
   ghaf.hardware.nvidia.orin = {
     enable = true;
-    kernelVersion = "upstream-6-6";
+    kernelVersion = "upstream-6-12";
     somType = "agx64";
     agx.enableNetvmWlanPCIPassthrough = true;
     carrierBoard = "devkit";

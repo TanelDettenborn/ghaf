@@ -46,7 +46,8 @@ in
       }
     ];
 
-    boot.kernelPatches = lib.mkIf (config.ghaf.hardware.nvidia.orin.kernelVersion == "upstream-6-6") [
+    boot.kernelPatches = lib.mkIf (config.ghaf.hardware.nvidia.orin.kernelVersion == "upstream-6-6"||
+                                   config.ghaf.hardware.nvidia.orin.kernelVersion == "upstream-6-12") [
       {
         name = "vfio-true";
         patch = ./0001-ARM-SMMU-drivers-return-always-true-for-IOMMU_CAP_CA.patch;
