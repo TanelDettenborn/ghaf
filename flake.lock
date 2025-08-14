@@ -335,16 +335,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1752672393,
-        "narHash": "sha256-Q1fQv2UUTI4q8omXVii02PK8xq1/KkoAxiNINJD6a3U=",
-        "owner": "tiiuae",
+        "lastModified": 1755162891,
+        "narHash": "sha256-MRmn6wYjJuiOdFky948bh7348FjG9o77p+8dM7UuRQw=",
+        "owner": "TanelDettenborn",
         "repo": "jetpack-nixos",
-        "rev": "44f56073863eb1ccda467ac47ef9251b985cb378",
+        "rev": "d7bbe6564e2e240a7ec76ce81a2eb3c04a36c999",
         "type": "github"
       },
       "original": {
-        "owner": "tiiuae",
-        "ref": "final-stretch",
+        "owner": "TanelDettenborn",
+        "ref": "WIP-ghaf-integration",
         "repo": "jetpack-nixos",
         "type": "github"
       }
