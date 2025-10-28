@@ -257,6 +257,10 @@ in
           referenceServiceModule
         ];
 
+      pkvmtestvm.extraModules = optionals cfg.pkvmtestvm.enable [
+        commonModule
+      ];
+
       # Adminvm modules
       adminvm.extraModules =
         optionals cfg.adminvm.enable [

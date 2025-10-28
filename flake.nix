@@ -119,7 +119,11 @@
     # Nvidia Orin support for NixOS
     jetpack-nixos = {
       #url = "github:anduril/jetpack-nixos";
-      url = "github:tiiuae/jetpack-nixos/another-fix-kernel";
+      #url = "github:tiiuae/jetpack-nixos/another-fix-kernel";
+
+      #PKVM
+      url = "github:tiiuae/jetpack-nixos/poc-pkvm-integration";
+
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

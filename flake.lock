@@ -335,16 +335,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1759184511,
-        "narHash": "sha256-Z3w2b7AlgHng5ktnnGp0CAoiMEB2Q3gHLvxiu5s0rd8=",
+        "lastModified": 1761680614,
+        "narHash": "sha256-uPHCRDzCTCAcBY5yFza1pP3VWm0glzLQIiRAcSeLoeo=",
         "owner": "tiiuae",
         "repo": "jetpack-nixos",
-        "rev": "00c33d0535659864c77813a26d8b9bc47f821ec1",
+        "rev": "7874df127fd89bc04c28e97ae792a37ba28e475b",
         "type": "github"
       },
       "original": {
         "owner": "tiiuae",
-        "ref": "another-fix-kernel",
+        "ref": "poc-pkvm-integration",
         "repo": "jetpack-nixos",
         "type": "github"
       }

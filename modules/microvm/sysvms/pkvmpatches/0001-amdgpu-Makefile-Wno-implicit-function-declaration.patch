@@ -1,0 +1,39 @@
+From 128e7be53c5b6922a6072af2217ca18803ae8110 Mon Sep 17 00:00:00 2001
+From: Tanel Dettenborn <tanel.dettenborn@tii.ae>
+Date: Wed, 8 Oct 2025 10:02:10 +0300
+Subject: [PATCH] amdgpu/Makefile: -Wno-implicit-function-declaration
+
+Signed-off-by: Tanel Dettenborn <tanel.dettenborn@tii.ae>
+---
+ drivers/gpu/drm/amd/amdgpu/Makefile | 1 +
+ drivers/hv/Makefile                 | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/Makefile b/drivers/gpu/drm/amd/amdgpu/Makefile
+index 384b798a9bad..c44b7d680999 100644
+--- a/drivers/gpu/drm/amd/amdgpu/Makefile
++++ b/drivers/gpu/drm/amd/amdgpu/Makefile
+@@ -57,6 +57,7 @@ subdir-ccflags-y += -Wno-type-limits
+ subdir-ccflags-y += -Wno-sign-compare
+ subdir-ccflags-y += -Wno-missing-field-initializers
+ subdir-ccflags-y += -Wno-override-init
++subdir-ccflags-y += -Wno-implicit-function-declaration
+ subdir-ccflags-$(CONFIG_DRM_AMDGPU_WERROR) += -Werror
+ 
+ amdgpu-y := amdgpu_drv.o
+diff --git a/drivers/hv/Makefile b/drivers/hv/Makefile
+index d76df5c8c2a9..9bef9105c2b4 100644
+--- a/drivers/hv/Makefile
++++ b/drivers/hv/Makefile
+@@ -6,6 +6,8 @@ obj-$(CONFIG_HYPERV_BALLOON)	+= hv_balloon.o
+ CFLAGS_hv_trace.o = -I$(src)
+ CFLAGS_hv_balloon.o = -I$(src)
+ 
++subdir-ccflags-y += -Wno-implicit-function-declaration
++
+ hv_vmbus-y := vmbus_drv.o \
+ 		 hv.o connection.o channel.o \
+ 		 channel_mgmt.o ring_buffer.o hv_trace.o
+-- 
+2.50.1
+

@@ -8,7 +8,6 @@
 }:
 let
   system = "aarch64-linux";
-
   #TODO move this to a standalone function
   #should it live in the library or just as a function file
   mkOrinConfiguration =
@@ -43,6 +42,19 @@ let
                 release.enable = variant == "release";
               };
             };
+
+            # PKVM stuff
+            ghaf.virtualization.microvm.pkvmtestvm.enable = true;
+            boot.kernelParams = [
+              "kvm-arm.mode=protected"
+
+              # Various debug prints for kernel
+              # "log_buf_len=128M"
+              # "earlycon"
+              # "earlyprintk"
+              # "debug"
+              # "ignore_loglevel"
+            ];
 
             nixpkgs = {
               hostPlatform.system = "aarch64-linux";

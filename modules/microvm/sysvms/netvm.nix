@@ -134,8 +134,8 @@ let
                 }
                 .${config.nixpkgs.hostPlatform.system};
               extraArgs = [
-                "-device"
-                "qemu-xhci"
+                # "-device"
+                # "qemu-xhci"
               ];
             };
           };
