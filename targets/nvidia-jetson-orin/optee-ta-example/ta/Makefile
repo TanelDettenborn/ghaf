@@ -1,0 +1,3 @@
+BINARY=11223344-1122-1122-1122334455667788
+
+-include $(TA_DEV_KIT_DIR)/mk/ta_dev_kit.mk

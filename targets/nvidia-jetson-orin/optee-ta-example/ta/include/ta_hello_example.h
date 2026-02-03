@@ -1,0 +1,10 @@
+#ifndef TA_HELLO_EXAMPLE_H
+#define TA_HELLO_EXAMPLE_H
+
+#define TA_HELLO_EXAMPLE_UUID \
+	{ 0x11223344, 0x1122, 0x1122,							\
+		{ 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88} }
+
+#define	PRINT_HELLO_MSG 542
+
+#endif
