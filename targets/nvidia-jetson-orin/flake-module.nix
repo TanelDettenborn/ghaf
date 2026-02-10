@@ -128,8 +128,27 @@ let
       package = hostConfiguration.config.system.build.${hostConfiguration.config.formatAttr};
     };
 
+  generate-luks =
+    tgt:
+    tgt
+    // rec {
+      name = tgt.name + "-luks";
+      hostConfiguration = tgt.hostConfiguration.extendModules {
+        modules = [
+          {
+            ghaf.hardware.nvidia.orin.diskEncryption.enable = true;
+          }
+        ];
+      };
+      package = hostConfiguration.config.system.build.${hostConfiguration.config.formatAttr};
+    };
+
   # Add nodemoapps targets
-  targets = target-configs ++ (map generate-nodemoapps target-configs);
+  targets =
+    target-configs
+    ++ (map generate-nodemoapps target-configs)
+    ++ (map generate-luks target-configs)
+    ++ (map (t: generate-luks (generate-nodemoapps t)) target-configs);
   crossTargets = map generate-cross-from-x86_64 targets;
 in
 {
@@ -144,7 +163,13 @@ in
         builtins.listToAttrs (map (t: lib.nameValuePair t.name t.package) crossTargets)
         // builtins.listToAttrs (
           map (
-            t: lib.nameValuePair "${t.name}-flash-script" t.hostConfiguration.pkgs.nvidia-jetpack.flashScript
+            t:
+            lib.nameValuePair "${t.name}-flash-script" (
+              if t.hostConfiguration.config.ghaf.hardware.nvidia.orin.diskEncryption.enable then
+                t.hostConfiguration.pkgs.nvidia-jetpack.legacyFlashScript
+              else
+                t.hostConfiguration.pkgs.nvidia-jetpack.flashScript
+            )
           ) crossTargets
         )
         // builtins.listToAttrs (
