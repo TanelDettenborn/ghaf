@@ -551,16 +551,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1769789167,
-        "narHash": "sha256-kKB3bqYJU5nzYeIROI82Ef9VtTbu4uA3YydSk/Bioa8=",
-        "owner": "NixOS",
+        "lastModified": 1771965128,
+        "narHash": "sha256-wT8x/px/OGOWgBWfjUmu/OldDlRSI/9wN9HW0otlorw=",
+        "owner": "TanelDettenborn",
         "repo": "nixpkgs",
-        "rev": "62c8382960464ceb98ea593cb8321a2cf8f9e3e5",
+        "rev": "c284d1bfb8b6259e51d583c9ad2adac0395790e6",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
+        "owner": "TanelDettenborn",
+        "ref": "cryptsetup-problem",
         "repo": "nixpkgs",
         "type": "github"
       }
