@@ -17,13 +17,19 @@
   modulesPath,
   lib,
   ...
-}:
+}: let
+  cryptsetup = ((pkgs.callPackage "${toString pkgs.path}/pkgs/by-name/cr/cryptsetup/package.nix" {}).overrideAttrs (oldAttrs: {
+    configureFlags = oldAttrs.configureFlags ++ [
+      "--with-luks2-lock-path=/build/cryptsetup"
+    ];
+  }));
+  in
 {
   imports = [ (modulesPath + "/installer/sd-card/sd-image.nix") ];
 
   boot.loader.grub.enable = false;
   hardware.enableAllHardware = lib.mkForce false;
-
+ 
   sdImage =
     let
       # TODO do we really need replaceVars just to set the python string in the
@@ -59,6 +65,23 @@
           --device-tree ${fdtPath}
       '';
       populateRootCommands = "";
+
+      preBuildCommands = ''
+        printf "### Cryptohacks: START\n"
+
+        printf '%s' "g" > key.txt
+        chmod 755 $root_fs
+        ${cryptsetup}/bin/cryptsetup reencrypt \
+            --encrypt \
+            --type luks2 \
+            --batch-mode \
+            --reduce-device-size $((16 * 1024 * 1024)) \
+            --key-file key.txt \
+            $root_fs
+
+        printf "### Cryptohacks: END\n"
+      '';
+
       postBuildCommands = ''
         fdisk_output=$(fdisk -l "$img")
 

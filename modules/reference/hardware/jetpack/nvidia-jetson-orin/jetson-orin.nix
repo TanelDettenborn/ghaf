@@ -145,7 +145,7 @@ in
         "af_alg"
       ];
       luks.devices.${cfg.diskEncryption.mapperName} = {
-        device = "/dev/mmcblk0p1";
+        device = if cfg.somType == "nx" then "/dev/sda2" else "/dev/mmcblk0p1";
         allowDiscards = true;
       };
     };

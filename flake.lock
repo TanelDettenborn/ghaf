@@ -551,16 +551,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1769789167,
-        "narHash": "sha256-kKB3bqYJU5nzYeIROI82Ef9VtTbu4uA3YydSk/Bioa8=",
-        "owner": "NixOS",
+        "lastModified": 1773841651,
+        "narHash": "sha256-rLO0LMFpu53P0Z/pMH+MFCrZDtXMysrtQy7ay5z3oXA=",
+        "owner": "TanelDettenborn",
         "repo": "nixpkgs",
-        "rev": "62c8382960464ceb98ea593cb8321a2cf8f9e3e5",
+        "rev": "60bb97b54e45ab0987ae45564aea4c6c7a16001f",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
+        "owner": "TanelDettenborn",
+        "ref": "sd-image-pre-build-command",
         "repo": "nixpkgs",
         "type": "github"
       }
