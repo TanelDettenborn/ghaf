@@ -24,7 +24,7 @@
     #TODO: carrying the extra patch(es) until merged to unstable
     #nixpkgs.url = "github:tiiuae/nixpkgs/nixos-unstable-occulante";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
+    
     # A framework for testing ghaf configurations
     ci-test-automation = {
       url = "github:tiiuae/ci-test-automation";
