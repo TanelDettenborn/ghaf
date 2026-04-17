@@ -85,7 +85,6 @@ in
           # Sanity check
           e2fsck -fy "$ROOT_IMAGE"
 
-          ls -la .
           # Reserve space for LUKS
           current_blocks=$(dumpe2fs -h "$ROOT_IMAGE" 2>/dev/null | sed -n 's/^Block count:[[:space:]]*//p')
           block_size=$(dumpe2fs -h "$ROOT_IMAGE" 2>/dev/null | sed -n 's/^Block size:[[:space:]]*//p')
@@ -103,7 +102,9 @@ in
           # cryptsetup read passphrase from file. 
           GHAF_LUKS_PASSPHRASE_FILE=$(mktemp ".luks-passphrase.XXXXXX")
           chmod 600 "$GHAF_LUKS_PASSPHRASE_FILE"
-          printf '%s' "${config.ghaf.hardware.nvidia.orin.diskEncryption.passphrase}" > "$GHAF_LUKS_PASSPHRASE_FILE"
+          printf '%s' "${if config.ghaf.hardware.nvidia.orin.diskEncryption.deviceUniqueKey.enable then
+            config.ghaf.hardware.nvidia.orin.diskEncryption.deviceUniqueKey.deviceManufacturePassphrase else
+                        config.ghaf.hardware.nvidia.orin.diskEncryption.userPassphrase.passphrase}" > "$GHAF_LUKS_PASSPHRASE_FILE"
 
           echo "Shrinking plaintext root filesystem before LUKS conversion ..."
           e2fsck -fy "$ROOT_IMAGE"
