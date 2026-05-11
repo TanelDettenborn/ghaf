@@ -180,6 +180,7 @@ let
         modules = [
           {
             ghaf.hardware.nvidia.orin.diskEncryption.enable = true;
+            ghaf.hardware.nvidia.orin.diskEncryption.deviceUniqueKey.enable = true;
           }
         ];
       };
