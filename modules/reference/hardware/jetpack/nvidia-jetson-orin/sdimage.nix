@@ -26,8 +26,11 @@ let
   cryptsetup =
     (pkgs.callPackage "${toString pkgs.path}/pkgs/by-name/cr/cryptsetup/package.nix" { }).overrideAttrs
       (oldAttrs: {
+        # /run/cryptsetup (the upstream default) is not writable inside the
+        # image build, and /build only exists on sandboxed-to-/build builders.
+        # /tmp is writable in every nix build environment.
         configureFlags = oldAttrs.configureFlags ++ [
-          "--with-luks2-lock-path=/build/cryptsetup"
+          "--with-luks2-lock-path=/tmp/cryptsetup"
         ];
       });
 in
