@@ -275,9 +275,9 @@ let
     ];
     text = ''
       DISK=${if cfg.somType == "nx" then "/dev/sda" else "/dev/mmcblk0"}
-      PART_NUM=${if cfg.somType == "nx" then "2" else "1"}
-      PART_DEV=${if cfg.somType == "nx" then "/dev/sda2" else "/dev/mmcblk0p1"}
-      ESP_DEVICE=${if cfg.somType == "nx" then "/dev/sda1" else "/dev/mmcblk0p2"}
+      PART_NUM=2
+      PART_DEV=${if cfg.somType == "nx" then "/dev/sda2" else "/dev/mmcblk0p2"}
+      ESP_DEVICE=${if cfg.somType == "nx" then "/dev/sda1" else "/dev/mmcblk0p1"}
       RESIZE_MARKER=".ghaf-resize-done"
       ESP_MOUNT="/mnt-esp"
 
