@@ -218,25 +218,43 @@ let
     ++ (map generate-luks target-configs)
     ++ (map (t: generate-luks (generate-nodemoapps t)) target-configs);
   crossTargets = map generate-cross-from-x86_64 targets;
-  secureTarget =
+  flashTarget =
     t: qspiOnly:
     let
       innerName = t.hostConfiguration.config.hardware.nvidia-jetpack.name;
       noSB =
         (t.hostConfiguration.extendModules {
           modules = [
-            {
-              ghaf.hardware.nvidia.orin.flashScriptOverrides.onlyQSPI = qspiOnly;
-            }
+            (
+              {
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.onlyQSPI = qspiOnly;
+              }
+              // lib.optionalAttrs (lib.strings.hasInfix "nx" t.name && !qspiOnly) {
+                # Kind of dirty workaround. NX has option to boot from USB or NVME.
+                # If it is a flash sript then we want to flash NVME.
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDisk = lib.mkForce "nvme0n1";
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDiskEspPartition = lib.mkForce "nvme0n1p1";
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDiskRootfsPartition = lib.mkForce "nvme0n1p2";
+              }
+            )
           ];
         }).pkgs.nvidia-jetpack.flashScript;
       withSB =
         (t.hostConfiguration.extendModules {
           modules = [
-            {
-              ghaf.hardware.nvidia.orin.secureboot.enable = lib.mkForce true;
-              ghaf.hardware.nvidia.orin.flashScriptOverrides.onlyQSPI = qspiOnly;
-            }
+            (
+              {
+                ghaf.hardware.nvidia.orin.secureboot.enable = lib.mkForce true;
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.onlyQSPI = qspiOnly;
+              }
+              // lib.optionalAttrs (lib.strings.hasInfix "nx" t.name && !qspiOnly) {
+                # Kind of dirty workaround. NX has option to boot from USB or NVME.
+                # If it is a flash sript then we want to flash NVME.
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDisk = lib.mkForce "nvme0n1";
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDiskEspPartition = lib.mkForce "nvme0n1p1";
+                ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDiskRootfsPartition = lib.mkForce "nvme0n1p2";
+              }
+            )
           ];
         }).pkgs.nvidia-jetpack.flashScript;
     in
@@ -298,15 +316,7 @@ in
             t:
             #Note: secureTarget does not toggle between secureboot on/off!!
             lib.nameValuePair "${t.name}-flash-script" (
-              lazyPackage "${t.name}-flash-script" (
-                # Encrypted targets need the legacy flash script for the
-                # flash-time LUKS reencrypt flow; everything else uses the
-                # secureboot-aware wrapper (runtime -s selects signed QSPI).
-                if t.hostConfiguration.config.ghaf.hardware.nvidia.orin.diskEncryption.enable then
-                  t.hostConfiguration.pkgs.nvidia-jetpack.legacyFlashScript
-                else
-                  secureTarget t false
-              )
+              lazyPackage "${t.name}-flash-script" (flashTarget t false)
             )
           ) crossTargets
         )
@@ -314,7 +324,7 @@ in
           map (
             t:
             #Note: secureTarget does not toggle between secureboot on/off!!
-            lib.nameValuePair "${t.name}-flash-qspi" (lazyPackage "${t.name}-flash-qspi" (secureTarget t true))
+            lib.nameValuePair "${t.name}-flash-qspi" (lazyPackage "${t.name}-flash-qspi" (flashTarget t true))
           ) crossTargets
         );
     };

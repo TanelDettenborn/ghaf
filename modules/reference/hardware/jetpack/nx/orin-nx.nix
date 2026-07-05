@@ -26,9 +26,11 @@
         somType = "nx";
         nx.enableNetvmEthernetPCIPassthrough = true;
         carrierBoard = "xavierNxDevkit";
-        # Orin NX p3768 devkit boots rootfs from NVMe (no eMMC on this SoM);
-        # configFileName below wires up the matching .conf + flash XML.
-        flashScriptOverrides.rootfsDevice = "nvme0n1p1";
+        # Orin NX p3768 devkit boots rootfs from NVMe and USB (no eMMC on this SoM);
+        # Default is set to USB
+        flashScriptOverrides.deviceDisk = "sda";
+        flashScriptOverrides.deviceDiskEspPartition = "sda1";
+        flashScriptOverrides.deviceDiskRootfsPartition = "sda2";
       };
 
       # Net VM hardware-specific modules - use hardware.definition for composition model

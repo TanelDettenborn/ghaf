@@ -10,6 +10,9 @@
 }:
 let
   cfg = config.ghaf.hardware.nvidia.orin;
+  deviceDisk = "/dev/" + cfg.flashScriptOverrides.deviceDisk;
+  deviceDiskEspPart = "/dev/" + cfg.flashScriptOverrides.deviceDiskEspPartition;
+  deviceDiskRootfsPart = "/dev/" + cfg.flashScriptOverrides.deviceDiskRootfsPartition;
   luksDiskKeyDescription = "luksDiskDeviceUniqueKey";
   rtcSeedAnchorPath = "/var/lib/systemd/timesync/clock";
   rtcSeedMaxAheadSeconds = 180 * 24 * 60 * 60;
@@ -274,10 +277,10 @@ let
       systemd
     ];
     text = ''
-      DISK=${if cfg.somType == "nx" then "/dev/sda" else "/dev/mmcblk0"}
+      DISK=${deviceDisk}
       PART_NUM=2
-      PART_DEV=${if cfg.somType == "nx" then "/dev/sda2" else "/dev/mmcblk0p2"}
-      ESP_DEVICE=${if cfg.somType == "nx" then "/dev/sda1" else "/dev/mmcblk0p1"}
+      PART_DEV=${deviceDiskRootfsPart}
+      ESP_DEVICE=${deviceDiskEspPart}
       RESIZE_MARKER=".ghaf-resize-done"
       ESP_MOUNT="/mnt-esp"
 
@@ -406,12 +409,19 @@ let
         handle_error
       }
 
+      sanitize_string() {
+        local dirty_str="$1"
+
+        # Convert to lowercase, then remove everything except a-z and 0-9
+        echo "$dirty_str" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9'
+      }
+
       read_luksDev_serial()
       {
         local luksDev=$1
         local luksSerial
 
-        luksSerial=$(udevadm info --query=property --name="$luksDev" | sed -n 's/^ID_SERIAL=//p')
+        luksSerial=$(sanitize_string "$(udevadm info --query=property --name="$luksDev" | sed -n 's/^ID_SERIAL=//p')")
         if [[ -z "$luksSerial" ]]; then
            printf "error: Failed to get luksDev serial\n"
            handle_error
@@ -448,7 +458,7 @@ let
       }
 
       # Convinience variables
-      luksDev=${if cfg.somType == "nx" then "/dev/sda2" else "/dev/mmcblk0p2"}
+      luksDev=${deviceDiskRootfsPart}
       defaultManufactureKey=${cfg.diskEncryption.deviceUniqueKey.deviceManufacturePassphrase}
       luksDiskKeyKeyringDescription=${luksDiskKeyDescription}
 
@@ -521,18 +531,43 @@ in
       default = "";
     };
 
-    flashScriptOverrides.rootfsDevice = mkOption {
+    flashScriptOverrides.deviceDisk = mkOption {
       description = ''
-        Rootfs device passed to NVIDIA's flash.sh as the trailing argument
-        (e.g. "mmcblk0p1" for eMMC/SD, "nvme0n1p1" for NVMe). This is
+        Note: Following description is for flashScriptOverrides.deviceDisk,
+        flashScriptOverrides.deviceDiskRootfsPartition and
+        flashScriptOverrides.deviceDiskEspPartition
+
+        For example Rootfs device passed to NVIDIA's flash.sh as the trailing
+        argument (e.g. "mmcblk0p1" for eMMC/SD, "nvme0n1p1" for NVMe). This is
         consumed by the partition layout in the .conf file referenced by
         configFileName and decides where the APP partition lands. Downstream
         callers (e.g. disk-encryption modules) can read this to know the
         rootfs location at build time.
 
+        For the sake of example Orin NX from USB
+        flashScriptOverrides.deviceDisk = "sda";
+        flashScriptOverrides.deviceDiskEspPartition = "sda1";
+        flashScriptOverrides.deviceDiskRootfsPartition = "sda2";
+
         No default: rootfs storage is not common to all carrier boards, so
         every per-SoM module must set this explicitly. An assertion in the
         config block enforces a non-empty value.
+      '';
+      type = types.str;
+      default = "";
+    };
+
+    flashScriptOverrides.deviceDiskRootfsPartition = mkOption {
+      description = ''
+        See deviceDisk option description
+      '';
+      type = types.str;
+      default = "";
+    };
+
+    flashScriptOverrides.deviceDiskEspPartition = mkOption {
+      description = ''
+        See deviceDisk option description
       '';
       type = types.str;
       default = "";
@@ -627,10 +662,13 @@ in
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.flashScriptOverrides.rootfsDevice != "";
+        assertion =
+          cfg.flashScriptOverrides.deviceDisk != ""
+          || cfg.flashScriptOverrides.deviceDiskRootfsPartition != ""
+          || cfg.flashScriptOverrides.deviceDiskEspPartition != "";
         message = ''
-          ghaf.hardware.nvidia.orin.flashScriptOverrides.rootfsDevice must be
-          set explicitly (e.g. "mmcblk0p1" for eMMC/SD, "nvme0n1p1" for NVMe).
+          ghaf.hardware.nvidia.orin.flashScriptOverrides.deviceDisk* must be
+          set explicitly (e.g. "mmcblk0" for eMMC/SD, "nvme0n1" for NVMe).
           The default is intentionally empty because rootfs storage varies per
           carrier board; the per-SoM module must declare it to avoid silently
           flashing to the wrong device.
@@ -664,7 +702,7 @@ in
     # assignment (prio 100) while leaving room for downstream mkForce (prio 50).
     hardware.nvidia-jetpack.flashScriptOverrides.flashArgs = lib.mkOverride 75 [
       config.hardware.nvidia-jetpack.flashScriptOverrides.configFileName
-      cfg.flashScriptOverrides.rootfsDevice
+      cfg.flashScriptOverrides.deviceDiskRootfsPartition
     ];
     nixpkgs.hostPlatform.system = "aarch64-linux";
 
@@ -797,7 +835,7 @@ in
       );
       luks.devices = lib.mkIf cfg.diskEncryption.enable {
         ${cfg.diskEncryption.mapperName} = {
-          device = if cfg.somType == "nx" then "/dev/sda2" else "/dev/mmcblk0p2";
+          device = deviceDiskRootfsPart;
           allowDiscards = true;
           keyFile = if cfg.diskEncryption.deviceUniqueKey.enable then "none" else null;
         };
@@ -829,11 +867,8 @@ in
         ];
 
       services.udev.rules = ''
-        ${lib.optionalString (cfg.diskEncryption.deviceUniqueKey.enable && cfg.somType == "nx") ''
-          ACTION=="add", SUBSYSTEM=="block", KERNEL=="sda", TAG+="systemd", ENV{SYSTEMD_WANTS}+="pre-disk-unique-key.service"
-        ''}
-        ${lib.optionalString (cfg.diskEncryption.deviceUniqueKey.enable && cfg.somType == "agx") ''
-          ACTION=="add", SUBSYSTEM=="block", KERNEL=="mmcblk0", TAG+="systemd", ENV{SYSTEMD_WANTS}+="pre-disk-unique-key.service"
+        ${lib.optionalString cfg.diskEncryption.deviceUniqueKey.enable ''
+          ACTION=="add", SUBSYSTEM=="block", KERNEL=="${cfg.flashScriptOverrides.deviceDisk}", TAG+="systemd", ENV{SYSTEMD_WANTS}+="pre-disk-unique-key.service"
         ''}
       '';
 
