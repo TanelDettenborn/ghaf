@@ -853,6 +853,7 @@ in
     # assignment. At normal priority it would be a conflicting definition, and
     # the documented remedy would not evaluate.
     hardware.nvidia-jetpack.firmware.eksFile = lib.mkDefault "${firmwareEkbImage}/eks_t234.img";
+    hardware.nvidia-jetpack.majorVersion = "7";
     hardware.nvidia-jetpack.kernel.version = "${cfg.kernelVersion}";
     # jetpack-nixos hardcodes the trailing rootfs device as mmcblk0p1; replay
     # the same default here but route it through cfg.flashScriptOverrides.deviceDiskRootfsPartition
@@ -942,7 +943,7 @@ in
           };
         }
       ]
-      ++ lib.optionals (cfg.diskEncryption.enable && cfg.kernelVersion == "upstream-6-6") [
+      ++ lib.optionals (cfg.diskEncryption.enable && cfg.kernelVersion == "upstream-6") [
         {
           name = "dm-crypt-config";
           patch = null;
@@ -967,7 +968,7 @@ in
 
     boot.initrd = {
       # Keep module selection aligned with the Orin JetPack baseline and avoid
-      # requesting dm-crypt as a loadable module for upstream-6-6.
+      # requesting dm-crypt as a loadable module for upstream-6.
       availableKernelModules = [
         "xhci-tegra"
         "ucsi_ccg"
@@ -988,7 +989,7 @@ in
         "dm-mod"
       ];
       kernelModules = [ ];
-      # algif_skcipher is not available with the upstream-6-6 kernel variant
+      # algif_skcipher is not available with the upstream-6 kernel variant
       # used by current Orin reference targets.
       luks.cryptoModules = lib.mkIf cfg.diskEncryption.enable (
         lib.mkForce [
